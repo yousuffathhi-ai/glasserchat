@@ -1,0 +1,186 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --gold-primary: #D4AF37;
+    --gold-bright: #FFD700;
+    --gold-dark: #B8860B;
+    --gold-deep: #AA820A;
+    --pearl-white: #F9F9FB;
+    --warm-ivory: #FAF8F2;
+    --obsidian-bg: #0D0F12;
+    --obsidian-surface: #14171C;
+    --obsidian-card: #1A1D23;
+  }
+
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    background-color: #0D0F12;
+    color: #F3F4F6;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Custom Typography classes */
+.font-display {
+  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+}
+
+.font-mono-code {
+  font-family: 'Fira Code', monospace;
+}
+
+/* Sophisticated Dark Glass & Surface Classes */
+.glass-panel-sophisticated {
+  background: rgba(18, 21, 26, 0.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.7), 0 0 20px rgba(212, 175, 55, 0.08);
+}
+
+.glass-bubble-sophisticated-sent {
+  background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 223, 115, 0.5);
+  box-shadow: 0 8px 24px rgba(212, 175, 55, 0.25);
+  color: #FFFFFF;
+}
+
+.glass-bubble-sophisticated-received {
+  background: rgba(26, 29, 35, 0.9);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  color: #F3F4F6;
+}
+
+/* White-Gold Liquid Glass Classes */
+.glass-panel-gold {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(212, 175, 55, 0.32);
+  box-shadow: 0 16px 40px -8px rgba(212, 175, 55, 0.14), 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.glass-bubble-gold-sent {
+  background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 223, 115, 0.5);
+  box-shadow: 0 8px 24px rgba(212, 175, 55, 0.25);
+  color: #FFFFFF;
+}
+
+.glass-bubble-gold-received {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  color: #1F2937;
+}
+
+/* Obsidian Emerald Dark Glass Classes */
+.glass-panel-dark {
+  background: rgba(15, 18, 20, 0.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.6), 0 0 20px rgba(16, 185, 129, 0.1);
+}
+
+.glass-bubble-dark-sent {
+  background: linear-gradient(135deg, rgba(6, 78, 59, 0.9) 0%, rgba(4, 120, 87, 0.85) 100%);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.2);
+}
+
+.glass-bubble-dark-received {
+  background: rgba(24, 30, 34, 0.9);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* Gold Gradient Shimmer Text */
+.gold-text-gradient {
+  background: linear-gradient(135deg, #B8860B 0%, #D4AF37 35%, #FFDF73 65%, #AA820A 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.emerald-text-gradient {
+  background: linear-gradient(135deg, #10B981 0%, #34D399 50%, #A7F3D0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Radial micro-dots wallpaper grid */
+.sophisticated-grid-bg {
+  background-image: radial-gradient(rgba(212, 175, 55, 0.1) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Liquid gold glow animation */
+@keyframes goldPulse {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.3), inset 0 0 10px rgba(255, 215, 0, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(212, 175, 55, 0.5), inset 0 0 15px rgba(255, 215, 0, 0.35);
+  }
+}
+
+.animate-gold-glow {
+  animation: goldPulse 3s infinite ease-in-out;
+}
+
+/* Custom refined scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(212, 175, 55, 0.3);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(212, 175, 55, 0.6);
+}
+
+/* Waveform bars animation */
+@keyframes waveBounce {
+  0%, 100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.wave-bar-active {
+  animation: waveBounce 1.2s infinite ease-in-out;
+}
+
+/* Disappearing message ticking animation */
+@keyframes ghostPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(0.96);
+  }
+}
+
+.ghost-ticker {
+  animation: ghostPulse 1.5s infinite ease-in-out;
+}
