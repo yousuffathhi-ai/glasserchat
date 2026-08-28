@@ -16,8 +16,12 @@ import {
   UserPlus,
   RefreshCw,
   Trash2,
+  Download,
+  CheckCircle2,
+  Monitor,
 } from 'lucide-react';
 import { ThemeMode, UserProfile } from '../types';
+import { isPWAInstalled } from '../utils/pwa';
 
 interface SettingsViewProps {
   currentUser: UserProfile;
@@ -28,6 +32,7 @@ interface SettingsViewProps {
   onOpenAuthModal?: () => void;
   onSwitchAccount?: (userId: string) => void;
   onClearAllData?: () => void;
+  onOpenPWAInstallModal?: () => void;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -39,9 +44,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onOpenAuthModal,
   onSwitchAccount,
   onClearAllData,
+  onOpenPWAInstallModal,
 }) => {
   const isSophisticatedDark = theme === 'sophisticated-dark';
   const isGold = theme === 'gold-light';
+  const isInstalled = isPWAInstalled();
   const [name, setName] = useState(currentUser.name);
   const [bio, setBio] = useState(currentUser.bio);
   const [handle, setHandle] = useState(currentUser.handle);
@@ -323,6 +330,48 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               />
             </button>
           </div>
+        </div>
+
+        {/* PWA Native Installation Section */}
+        <div
+          className={`p-5 rounded-3xl border space-y-3 ${
+            isSophisticatedDark
+              ? 'bg-[#16191E] border-[#D4AF37]/35'
+              : isGold
+              ? 'bg-white/80 border-[#D4AF37]/40 shadow-sm'
+              : 'bg-[#121619]/80 border-emerald-500/30'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center space-x-1.5">
+              <Download className="w-3.5 h-3.5 text-[#D4AF37]" />
+              <span>Progressive Web App (PWA)</span>
+            </h3>
+            {isInstalled ? (
+              <span className="text-[10px] bg-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded-full flex items-center space-x-1">
+                <CheckCircle2 className="w-3 h-3" />
+                <span>Installed</span>
+              </span>
+            ) : (
+              <span className="text-[10px] bg-[#D4AF37]/20 text-[#D4AF37] font-bold px-2 py-0.5 rounded-full">
+                Installable
+              </span>
+            )}
+          </div>
+
+          <p className="text-xs text-slate-400 leading-relaxed">
+            Install GlassChat Pro as a standalone native desktop or mobile application with offline persistence, full screen view, and hardware push notifications.
+          </p>
+
+          {onOpenPWAInstallModal && (
+            <button
+              onClick={onOpenPWAInstallModal}
+              className="w-full py-2.5 px-4 rounded-2xl bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-slate-950 font-bold text-xs shadow-md hover:brightness-105 transition-all flex items-center justify-center space-x-1.5"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>{isInstalled ? 'View PWA Diagnostics' : 'Install PWA App to Device'}</span>
+            </button>
+          )}
         </div>
 
         {/* Storage Reset Option */}

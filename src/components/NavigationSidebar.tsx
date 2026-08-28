@@ -11,6 +11,7 @@ import {
   Users,
   ShieldCheck,
   Zap,
+  Download,
 } from 'lucide-react';
 import { ThemeMode, UserProfile, OnlineStatus, NavigationTab } from '../types';
 
@@ -24,6 +25,7 @@ interface NavigationSidebarProps {
   missedCallsCount?: number;
   unviewedStoriesCount?: number;
   onLockApp?: () => void;
+  onOpenPWAInstallModal?: () => void;
 }
 
 export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
@@ -36,6 +38,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   missedCallsCount = 0,
   unviewedStoriesCount = 0,
   onLockApp,
+  onOpenPWAInstallModal,
 }) => {
   const isSophisticatedDark = theme === 'sophisticated-dark';
   const isGold = theme === 'gold-light';
@@ -181,6 +184,28 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
           >
             <Settings className="w-5 h-5 transition-transform group-hover:scale-110" />
           </button>
+
+          {/* PWA Install Button */}
+          {onOpenPWAInstallModal && (
+            <button
+              id="nav-pwa-install-btn"
+              onClick={onOpenPWAInstallModal}
+              className={`relative p-3 rounded-2xl transition-all duration-200 group border ${
+                isSophisticatedDark
+                  ? 'border-[#D4AF37]/40 bg-[#16191E] text-[#D4AF37] hover:bg-[#D4AF37]/20 shadow-[0_0_15px_rgba(212,175,55,0.15)]'
+                  : isGold
+                  ? 'border-[#D4AF37]/40 bg-amber-50 text-[#996515] hover:bg-amber-100 shadow-sm'
+                  : 'border-emerald-500/30 bg-emerald-950/40 text-emerald-400 hover:bg-emerald-900/40'
+              }`}
+              title="Install GlassChat Pro PWA App"
+            >
+              <Download className="w-5 h-5 transition-transform group-hover:-translate-y-0.5 group-hover:scale-110" />
+              <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#D4AF37] opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-[#D4AF37]"></span>
+              </span>
+            </button>
+          )}
         </nav>
       </div>
 

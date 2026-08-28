@@ -13,6 +13,7 @@ import { CallsHistoryView } from './components/CallsHistoryView';
 import { ContactsView } from './components/ContactsView';
 import { SettingsView } from './components/SettingsView';
 import { AuthModal } from './components/AuthModal';
+import { PWAInstallModal } from './components/PWAInstallModal';
 
 import {
   Chat,
@@ -26,6 +27,7 @@ import {
   UserProfile,
 } from './types';
 import { soundFx } from './utils/audio';
+import { isPWAInstalled } from './utils/pwa';
 import {
   getRegisteredUsers,
   getCurrentUser,
@@ -82,6 +84,7 @@ export default function App() {
   const [lightboxMedia, setLightboxMedia] = useState<{ url: string; caption?: string } | null>(
     null
   );
+  const [isPWAInstallModalOpen, setIsPWAInstallModalOpen] = useState<boolean>(false);
 
   // Sync theme class to document body
   useEffect(() => {
@@ -635,6 +638,7 @@ export default function App() {
         }
         currentUser={currentUser}
         unreadTotalCount={chats.reduce((acc, c) => acc + (c.unreadCount || 0), 0)}
+        onOpenPWAInstallModal={() => setIsPWAInstallModalOpen(true)}
       />
 
       {/* 2. Secondary Panel: ChatList / Calls / Contacts / Settings */}
@@ -758,12 +762,22 @@ export default function App() {
               onOpenAuthModal={() => setIsAuthModalOpen(true)}
               onSwitchAccount={handleLoginUser}
               onClearAllData={handleClearAllData}
+              onOpenPWAInstallModal={() => setIsPWAInstallModalOpen(true)}
             />
           </div>
         )}
       </div>
 
       {/* 3. Global Overlays & Modals */}
+      {/* PWA Install Modal */}
+      {isPWAInstallModalOpen && (
+        <PWAInstallModal
+          isOpen={isPWAInstallModalOpen}
+          onClose={() => setIsPWAInstallModalOpen(false)}
+          theme={theme}
+        />
+      )}
+
       {/* Auth / Registration Modal */}
       {isAuthModalOpen && (
         <AuthModal
