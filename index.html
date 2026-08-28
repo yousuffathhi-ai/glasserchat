@@ -2,31 +2,71 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>GlassChat Pro</title>
-    <meta name="description" content="Ultra-modern real-time messaging, WebRTC calling, Status stories, and AI assistant PWA with Liquid Gold Glassmorphism & Obsidian themes." />
+    <meta name="description" content="Next-generation encrypted chat, HD WebRTC calls, AI translation, and status sharing by PGV Creation." />
     <meta property="og:title" content="GlassChat Pro" />
-    <meta property="og:description" content="Ultra-modern real-time messaging, WebRTC calling, Status stories, and AI assistant PWA with Liquid Gold Glassmorphism & Obsidian themes." />
+    <meta property="og:description" content="Next-generation encrypted chat, HD WebRTC calls, AI translation, and status sharing by PGV Creation." />
     <meta property="og:type" content="website" />
-    <meta name="theme-color" content="#D4AF37" />
+    <meta property="og:image" content="/icon.svg" />
+    
+    <!-- PWA Color & Mobile Capabilities -->
+    <meta name="theme-color" content="#CCFF00" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0B0D0E" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="GlassChat Pro" />
+    <meta name="apple-mobile-web-app-title" content="GlassChat" />
     <meta name="application-name" content="GlassChat Pro" />
-    <meta name="msapplication-TileColor" content="#0E1013" />
-    <meta name="msapplication-navbutton-color" content="#D4AF37" />
+    <meta name="msapplication-TileColor" content="#0B0D0E" />
+    <meta name="msapplication-TileImage" content="/icon.svg" />
+    <meta name="msapplication-navbutton-color" content="#CCFF00" />
     
-    <!-- PWA Icons and Manifest -->
+    <!-- PWA Icons and Web Manifest -->
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <link rel="apple-touch-icon" href="/icon.svg" />
-    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/icon.svg" />
+    <link rel="apple-touch-icon" sizes="512x512" href="/icon.svg" />
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
   </head>
-  <body class="overflow-x-hidden antialiased select-none">
+  <body class="overflow-x-hidden antialiased select-none bg-[#0B0D0E] text-slate-100">
     <div id="root"></div>
+
+    <!-- PWA Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js', { scope: '/' })
+            .then(function(registration) {
+              console.log('[PGV Creation] 🚀 GlassChat Service Worker registered successfully with scope:', registration.scope);
+              
+              // Handle Service Worker update checks
+              registration.onupdatefound = function() {
+                var installingWorker = registration.installing;
+                if (installingWorker) {
+                  installingWorker.onstatechange = function() {
+                    if (installingWorker.state === 'installed') {
+                      if (navigator.serviceWorker.controller) {
+                        console.log('[PGV Creation] ⚡ New GlassChat version available. Reload to update.');
+                      } else {
+                        console.log('[PGV Creation] ✨ GlassChat PWA cached and ready for offline use.');
+                      }
+                    }
+                  };
+                }
+              };
+            })
+            .catch(function(error) {
+              console.error('[PGV Creation] ❌ GlassChat Service Worker registration failed:', error);
+            });
+        });
+      }
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

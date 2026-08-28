@@ -1,21 +1,20 @@
 {
-  "name": "GlassChat Pro",
   "short_name": "GlassChat",
-  "description": "Ultra-modern real-time messaging, WebRTC calling, Status stories, and AI assistant with Liquid Gold Glassmorphism.",
+  "name": "GlassChat Pro - Real-Time AI & WebRTC Messenger",
+  "description": "Next-generation encrypted chat, HD WebRTC calls, AI translation, and status sharing by PGV Creation.",
   "start_url": "/",
   "id": "/",
   "scope": "/",
   "display": "standalone",
-  "orientation": "portrait-primary",
-  "background_color": "#0E1013",
-  "theme_color": "#D4AF37",
+  "orientation": "portrait",
+  "background_color": "#0B0D0E",
+  "theme_color": "#CCFF00",
   "lang": "en-US",
   "dir": "ltr",
   "categories": [
     "social",
     "communication",
-    "productivity",
-    "utilities"
+    "productivity"
   ],
   "icons": [
     {
@@ -47,8 +46,8 @@
     {
       "name": "New Chat",
       "short_name": "New Chat",
-      "description": "Start a direct encrypted conversation",
-      "url": "/?action=new-chat",
+      "description": "Start a new encrypted chat conversation",
+      "url": "/?action=new_chat",
       "icons": [
         {
           "src": "/icon.svg",
@@ -57,22 +56,10 @@
       ]
     },
     {
-      "name": "Calls History",
-      "short_name": "Calls",
-      "description": "View HD voice & video calls",
-      "url": "/?tab=calls",
-      "icons": [
-        {
-          "src": "/icon.svg",
-          "sizes": "192x192"
-        }
-      ]
-    },
-    {
-      "name": "24h Status",
-      "short_name": "Status",
-      "description": "View and publish stories",
-      "url": "/?tab=status",
+      "name": "Start Call",
+      "short_name": "Start Call",
+      "description": "Launch HD audio or video call",
+      "url": "/?action=call",
       "icons": [
         {
           "src": "/icon.svg",

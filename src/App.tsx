@@ -14,6 +14,7 @@ import { ContactsView } from './components/ContactsView';
 import { SettingsView } from './components/SettingsView';
 import { AuthModal } from './components/AuthModal';
 import { PWAInstallModal } from './components/PWAInstallModal';
+import { InstallPwaBanner } from './components/InstallPwaBanner';
 
 import {
   Chat,
@@ -85,6 +86,20 @@ export default function App() {
     null
   );
   const [isPWAInstallModalOpen, setIsPWAInstallModalOpen] = useState<boolean>(false);
+
+  // Handle PWA shortcut actions from URL query parameters (e.g. /?action=new_chat, /?action=call)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const action = urlParams.get('action');
+      if (action === 'new_chat') {
+        setActiveTab('chats');
+        setNewChatModalMode('direct');
+      } else if (action === 'call') {
+        setActiveTab('calls');
+      }
+    }
+  }, []);
 
   // Sync theme class to document body
   useEffect(() => {
@@ -867,6 +882,11 @@ export default function App() {
           onClose={() => setLightboxMedia(null)}
         />
       )}
+
+      {/* Floating PWA Install Prompt Banner */}
+      <InstallPwaBanner
+        onOpenDetailedModal={() => setIsPWAInstallModalOpen(true)}
+      />
     </div>
   );
 }

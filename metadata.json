@@ -1,6 +1,6 @@
 {
   "name": "GlassChat Pro",
-  "description": "Ultra-modern real-time messaging, WebRTC calling, Status stories, and AI assistant PWA with Liquid Gold Glassmorphism & Obsidian themes.",
+  "description": "Next-generation encrypted chat, HD WebRTC calls, AI translation, and status sharing by PGV Creation.",
   "requestFramePermissions": ["camera", "microphone", "geolocation"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
