@@ -1,71 +1,104 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <!-- Background Gradient: Obsidian Black -->
+    <!-- Background Gradient: Obsidian Slate -->
     <radialGradient id="obsidianBg" cx="50%" cy="30%" r="85%">
-      <stop offset="0%" stop-color="#16191E" />
-      <stop offset="50%" stop-color="#0B0D0E" />
-      <stop offset="100%" stop-color="#050607" />
+      <stop offset="0%" stop-color="#161E2E" />
+      <stop offset="45%" stop-color="#0B111B" />
+      <stop offset="100%" stop-color="#05080E" />
     </radialGradient>
     
-    <!-- Neon Lime to Emerald Glow -->
-    <linearGradient id="neonLimeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#EAFF66" />
-      <stop offset="35%" stop-color="#CCFF00" />
+    <!-- Cyan to Emerald Gradient -->
+    <linearGradient id="cyanEmeraldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22D3EE" />
+      <stop offset="40%" stop-color="#06B6D4" />
       <stop offset="80%" stop-color="#10B981" />
       <stop offset="100%" stop-color="#059669" />
     </linearGradient>
 
-    <!-- Glassmorphic Gradient -->
-    <linearGradient id="glassShield" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#1A221E" stop-opacity="0.85" />
-      <stop offset="100%" stop-color="#0B0D0E" stop-opacity="0.95" />
+    <!-- Translucent Frosted Glass Fill -->
+    <linearGradient id="frostedGlassFill" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.22" />
+      <stop offset="50%" stop-color="#06B6D4" stop-opacity="0.08" />
+      <stop offset="100%" stop-color="#10B981" stop-opacity="0.18" />
     </linearGradient>
 
-    <!-- Emerald Glow Filter -->
-    <filter id="emeraldGlow" x="-30%" y="-30%" width="160%" height="160%">
-      <feGaussianBlur stdDeviation="14" result="blur" />
+    <!-- Glowing Camera Lens Gradient -->
+    <radialGradient id="lensReflect" cx="35%" cy="35%" r="70%">
+      <stop offset="0%" stop-color="#67E8F9" />
+      <stop offset="35%" stop-color="#06B6D4" />
+      <stop offset="75%" stop-color="#042F2E" />
+      <stop offset="100%" stop-color="#021A17" />
+    </radialGradient>
+
+    <!-- Glow & Shadow Filters -->
+    <filter id="neonGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="12" result="blur" />
       <feComposite in="SourceGraphic" in2="blur" operator="over" />
     </filter>
 
-    <filter id="neonDropShadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#CCFF00" flood-opacity="0.3" />
+    <filter id="glassShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#06B6D4" flood-opacity="0.35" />
     </filter>
   </defs>
 
-  <!-- Base App Background (Squircle) -->
+  <!-- Base App Icon Squircle Canvas -->
   <rect width="512" height="512" rx="128" fill="url(#obsidianBg)" />
   
-  <!-- Outer Emerald & Neon Border -->
-  <rect x="6" y="6" width="500" height="500" rx="122" fill="none" stroke="url(#neonLimeGrad)" stroke-width="4" stroke-opacity="0.6" />
+  <!-- Outer Glow Neon Rim -->
+  <rect x="8" y="8" width="496" height="496" rx="120" fill="none" stroke="url(#cyanEmeraldGrad)" stroke-width="4" stroke-opacity="0.5" />
 
-  <!-- Ambient Backlight -->
-  <circle cx="256" cy="240" r="130" fill="#CCFF00" opacity="0.12" filter="url(#emeraldGlow)" />
+  <!-- Ambient Light Orbs -->
+  <circle cx="210" cy="190" r="140" fill="#06B6D4" opacity="0.18" filter="url(#neonGlow)" />
+  <circle cx="330" cy="310" r="120" fill="#10B981" opacity="0.16" filter="url(#neonGlow)" />
 
-  <!-- Glass Chat Bubble Shape -->
-  <g filter="url(#neonDropShadow)">
-    <path d="M140 150 C140 110, 372 110, 372 150 L372 270 C372 310, 270 310, 240 340 L205 375 C195 385, 180 380, 180 365 L180 310 C145 310, 140 290, 140 270 Z" 
-          fill="url(#glassShield)" 
-          stroke="url(#neonLimeGrad)" 
-          stroke-width="7" />
+  <!-- Main 3D Frosted Glass Chat Bubble -->
+  <g filter="url(#glassShadow)">
+    <!-- Chat Bubble Path with Tail -->
+    <path d="M140 145 C140 105, 372 105, 372 145 L372 265 C372 305, 275 305, 245 338 L208 375 C198 385, 182 380, 182 365 L182 305 C148 305, 140 285, 140 265 Z" 
+          fill="url(#frostedGlassFill)" 
+          stroke="url(#cyanEmeraldGrad)" 
+          stroke-width="7" 
+          stroke-linecap="round"
+          stroke-linejoin="round" />
 
-    <!-- Glass Specular Highlight -->
-    <path d="M160 145 C190 125, 320 125, 350 145 C355 165, 335 180, 256 180 C175 180, 155 165, 160 145 Z" 
+    <!-- Specular Highlight Curve on Top Edge -->
+    <path d="M165 140 C200 120, 310 120, 345 140 C350 160, 330 172, 256 172 C180 172, 160 160, 165 140 Z" 
           fill="#FFFFFF" 
-          opacity="0.1" />
+          opacity="0.25" />
   </g>
 
-  <!-- Central Dynamic Waveform & Sparkle -->
-  <g filter="url(#emeraldGlow)">
-    <!-- Central PGV Creation Sparkle -->
-    <path d="M256 175 Q256 225 306 225 Q256 225 256 275 Q256 225 206 225 Q256 225 256 175 Z" 
-          fill="url(#neonLimeGrad)" />
+  <!-- Glowing WebRTC Camera Lens / Communication Node -->
+  <g filter="url(#neonGlow)">
+    <!-- Lens Outer Ring -->
+    <circle cx="256" cy="215" r="48" fill="url(#lensReflect)" stroke="url(#cyanEmeraldGrad)" stroke-width="5" />
     
-    <!-- Core Bright Dot -->
-    <circle cx="256" cy="225" r="7" fill="#FFFFFF" />
+    <!-- Inner Lens Aperture -->
+    <circle cx="256" cy="215" r="28" fill="#031818" stroke="#22D3EE" stroke-width="2.5" />
+    <circle cx="256" cy="215" r="14" fill="#10B981" opacity="0.85" />
+    
+    <!-- Lens Optical Reflection Dot -->
+    <circle cx="244" cy="203" r="7" fill="#FFFFFF" opacity="0.9" />
+    <circle cx="266" cy="225" r="3.5" fill="#67E8F9" opacity="0.6" />
+
+    <!-- Video Recording / Connected Signal Pip -->
+    <circle cx="330" cy="155" r="10" fill="#10B981" stroke="#FFFFFF" stroke-width="2.5" />
+    <circle cx="330" cy="155" r="14" fill="#10B981" opacity="0.4" />
   </g>
 
-  <!-- Audio Waves / WebRTC Calling Indicators -->
-  <circle cx="195" cy="275" r="6" fill="#CCFF00" opacity="0.9" />
-  <circle cx="317" cy="275" r="6" fill="#CCFF00" opacity="0.9" />
-  <circle cx="256" cy="315" r="4.5" fill="#10B981" />
+  <!-- Subtle Waveform Bars beneath Lens -->
+  <g opacity="0.85">
+    <rect x="186" y="278" width="6" height="12" rx="3" fill="#22D3EE" />
+    <rect x="198" y="274" width="6" height="20" rx="3" fill="#06B6D4" />
+    <rect x="210" y="270" width="6" height="28" rx="3" fill="#10B981" />
+    <rect x="222" y="276" width="6" height="16" rx="3" fill="#34D399" />
+    
+    <rect x="284" y="276" width="6" height="16" rx="3" fill="#34D399" />
+    <rect x="296" y="270" width="6" height="28" rx="3" fill="#10B981" />
+    <rect x="308" y="274" width="6" height="20" rx="3" fill="#06B6D4" />
+    <rect x="320" y="278" width="6" height="12" rx="3" fill="#22D3EE" />
+  </g>
+
+  <!-- PGV Creation Watermark & Tagline Metadata -->
+  <text x="256" y="445" font-family="'Plus Jakarta Sans', -apple-system, sans-serif" font-size="19" font-weight="800" letter-spacing="6" fill="#E2E8F0" text-anchor="middle" opacity="0.95">GLASSCHAT</text>
+  <text x="256" y="472" font-family="'Plus Jakarta Sans', -apple-system, sans-serif" font-size="10.5" font-weight="600" letter-spacing="3" fill="#06B6D4" text-anchor="middle" opacity="0.9">CLEAR AS GLASS, CLASS AS ALWAYS</text>
 </svg>

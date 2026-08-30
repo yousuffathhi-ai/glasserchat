@@ -289,6 +289,287 @@ Provide response in JSON:
   }
 });
 
+// ==================== REAL-TIME REGISTERED USERS & CONTACTS DATABASE ====================
+
+interface ServerRegisteredUser {
+  id: string;
+  name: string;
+  username: string;
+  phone: string;
+  profilePic: string;
+  status: string;
+  isOnline: boolean;
+  lastSeen?: string;
+  createdAt: number;
+}
+
+// In-memory persistent registered users pool
+const registeredUsersDB = new Map<string, ServerRegisteredUser>();
+
+// Initialize default seed registered accounts for live testing if empty
+const seedUsers: ServerRegisteredUser[] = [
+  {
+    id: 'user-elena-vance',
+    name: 'Elena Vance',
+    username: '@elena_vance',
+    phone: '+14155550198',
+    profilePic: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
+    status: 'Exploring Liquid Glass & WebRTC 4K 🔮',
+    isOnline: true,
+    createdAt: Date.now() - 86400000,
+  },
+  {
+    id: 'user-marcus-sterling',
+    name: 'Marcus Sterling',
+    username: '@marcus_sterling',
+    phone: '+14155550142',
+    profilePic: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
+    status: 'Leading Quantum Architecture at PGV Creation ⚡',
+    isOnline: true,
+    createdAt: Date.now() - 172800000,
+  },
+  {
+    id: 'user-sophia-chen',
+    name: 'Sophia Chen',
+    username: '@sophia_chen',
+    phone: '+14155550177',
+    profilePic: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80',
+    status: 'Available for WebRTC video sync 📹',
+    isOnline: false,
+    lastSeen: '10m ago',
+    createdAt: Date.now() - 259200000,
+  },
+  {
+    id: 'user-alex-rivera',
+    name: 'Alex Rivera',
+    username: '@alex_rivera',
+    phone: '+14155550111',
+    profilePic: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80',
+    status: 'End-to-End Encrypted 🔒',
+    isOnline: true,
+    createdAt: Date.now() - 345600000,
+  }
+];
+
+seedUsers.forEach((u) => registeredUsersDB.set(u.id, u));
+
+// Register or sync user into server DB
+app.post('/api/contacts/register', (req, res) => {
+  try {
+    const { id, name, username, phone, profilePic, status } = req.body;
+    if (!id || !name) {
+      return res.status(400).json({ error: 'User ID and Name are required' });
+    }
+
+    const cleanPhone = (phone || '').replace(/[^0-9+]/g, '');
+    const cleanUsername = (username || '').startsWith('@') ? username : `@${username || name.toLowerCase().replace(/\s+/g, '_')}`;
+
+    const user: ServerRegisteredUser = {
+      id,
+      name,
+      username: cleanUsername,
+      phone: cleanPhone,
+      profilePic: profilePic || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400',
+      status: status || 'Hey there! I am using GlassChat Pro ✨',
+      isOnline: true,
+      createdAt: Date.now(),
+    };
+
+    registeredUsersDB.set(id, user);
+    res.json({ success: true, user });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to register user on server' });
+  }
+});
+
+// Search Registered User by Phone Number or Username
+app.post('/api/contacts/search-registered', async (req, res) => {
+  try {
+    const { searchQuery, currentUserPhone, currentUserId } = req.body;
+
+    if (!searchQuery || typeof searchQuery !== 'string') {
+      return res.status(400).json({ error: 'searchQuery string is required' });
+    }
+
+    const rawQuery = searchQuery.trim();
+    // Clean phone number format (digits only)
+    const cleanedDigits = rawQuery.replace(/[^0-9]/g, '');
+    const lowerQuery = rawQuery.toLowerCase().replace(/^@/, '');
+
+    const allUsers = Array.from(registeredUsersDB.values());
+
+    // Match Registered User
+    const matchedUser = allUsers.find((user) => {
+      // Don't return self
+      if (currentUserId && user.id === currentUserId) return false;
+      if (currentUserPhone && user.phone && user.phone.replace(/[^0-9]/g, '') === currentUserPhone.replace(/[^0-9]/g, '')) {
+        return false;
+      }
+
+      const userDigits = (user.phone || '').replace(/[^0-9]/g, '');
+      const userUsername = (user.username || '').toLowerCase().replace(/^@/, '');
+      const userName = (user.name || '').toLowerCase();
+
+      // Check phone match
+      if (cleanedDigits.length >= 4 && userDigits.includes(cleanedDigits)) {
+        return true;
+      }
+
+      // Check username or name match
+      if (userUsername.includes(lowerQuery) || userName.includes(lowerQuery)) {
+        return true;
+      }
+
+      return false;
+    });
+
+    if (!matchedUser) {
+      return res.status(200).json({
+        found: false,
+        message: 'No registered user found. Send Invite link via WhatsApp or SMS!',
+      });
+    }
+
+    return res.status(200).json({
+      found: true,
+      user: {
+        id: matchedUser.id,
+        name: matchedUser.name,
+        username: matchedUser.username,
+        phone: matchedUser.phone || '+1 (555) 019-2834',
+        profilePic: matchedUser.profilePic || '/icon.svg',
+        status: matchedUser.status || 'Hey there! I am using GlassChat',
+        isOnline: matchedUser.isOnline,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ error: 'Database search failed' });
+  }
+});
+
+// GET /api/contacts/registered - List all registered users in DB
+app.get('/api/contacts/registered', (req, res) => {
+  const users = Array.from(registeredUsersDB.values()).map((u) => ({
+    id: u.id,
+    name: u.name,
+    username: u.username,
+    phone: u.phone,
+    profilePic: u.profilePic,
+    status: u.status,
+    isOnline: u.isOnline,
+  }));
+  res.json({ users });
+});
+
+// POST /api/contacts/sync - Match array of device phone numbers against registered users
+app.post('/api/contacts/sync', (req, res) => {
+  try {
+    const { phoneNumbers = [] } = req.body;
+    const allUsers = Array.from(registeredUsersDB.values());
+
+    const matchedUsers = allUsers.filter((user) => {
+      const uDigits = (user.phone || '').replace(/[^0-9]/g, '');
+      return phoneNumbers.some((p: string) => {
+        const pDigits = p.replace(/[^0-9]/g, '');
+        return pDigits.length >= 6 && (uDigits.includes(pDigits) || pDigits.includes(uDigits));
+      });
+    });
+
+    res.json({
+      totalSynced: phoneNumbers.length,
+      matchedCount: matchedUsers.length,
+      users: matchedUsers,
+    });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Contact sync failed' });
+  }
+});
+
+// ==================== REAL-TIME CALL SIGNALING ENGINE ====================
+
+interface ActiveCallSignal {
+  callId: string;
+  callerId: string;
+  callerName: string;
+  callerAvatar: string;
+  callerPhone?: string;
+  callerHandle?: string;
+  receiverId: string;
+  callType: 'audio' | 'video';
+  chatId?: string;
+  status: 'ringing' | 'accepted' | 'rejected' | 'cancelled' | 'ended';
+  timestamp: number;
+}
+
+const activeCallsMap = new Map<string, ActiveCallSignal>();
+
+// POST /api/signaling/call - Trigger call ring to receiver
+app.post('/api/signaling/call', (req, res) => {
+  try {
+    const callData: ActiveCallSignal = req.body;
+    if (!callData || !callData.callId || !callData.receiverId) {
+      return res.status(400).json({ error: 'Valid callId and receiverId are required' });
+    }
+
+    activeCallsMap.set(callData.callId, callData);
+    res.json({ success: true, status: 'ringing', callId: callData.callId });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Call signal failed' });
+  }
+});
+
+// POST /api/signaling/action - Accept, Reject, Cancel, End
+app.post('/api/signaling/action', (req, res) => {
+  try {
+    const { callId, action } = req.body;
+    const call = activeCallsMap.get(callId);
+    if (!call) {
+      return res.status(404).json({ error: 'Call session not found' });
+    }
+
+    if (action === 'accept') {
+      call.status = 'accepted';
+    } else if (action === 'reject') {
+      call.status = 'rejected';
+      setTimeout(() => activeCallsMap.delete(callId), 10000);
+    } else if (action === 'cancel') {
+      call.status = 'cancelled';
+      setTimeout(() => activeCallsMap.delete(callId), 10000);
+    } else if (action === 'end') {
+      call.status = 'ended';
+      setTimeout(() => activeCallsMap.delete(callId), 10000);
+    }
+
+    call.timestamp = Date.now();
+    activeCallsMap.set(callId, call);
+    res.json({ success: true, call });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Signaling action failed' });
+  }
+});
+
+// GET /api/signaling/active - Poll active call for user
+app.get('/api/signaling/active', (req, res) => {
+  const { userId } = req.query;
+  if (!userId || typeof userId !== 'string') {
+    return res.json({ call: null });
+  }
+
+  const now = Date.now();
+  for (const call of activeCallsMap.values()) {
+    // Exclude stale calls (> 45s)
+    if (now - call.timestamp > 45000) {
+      activeCallsMap.delete(call.callId);
+      continue;
+    }
+    if ((call.receiverId === userId || call.callerId === userId) && call.status === 'ringing') {
+      return res.json({ call });
+    }
+  }
+
+  res.json({ call: null });
+});
+
 // Vite Middleware for Dev and Static for Prod
 async function setupServer() {
   if (process.env.NODE_ENV !== 'production') {

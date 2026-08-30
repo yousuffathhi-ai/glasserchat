@@ -192,6 +192,7 @@ export interface UserProfile {
   status: OnlineStatus;
   customStatusText?: string;
   wallpaper: string;
+  wallpaperOpacity?: number;
   theme: ThemeMode;
   bubbleStyle: 'liquid-glass' | 'modern-soft' | 'sharp-contrast';
   fontSize: 'sm' | 'base' | 'lg';

@@ -223,17 +223,39 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </button>
         )}
 
-        {/* Brand Header */}
-        <div className="flex flex-col items-center text-center mb-6">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#B8860B] via-[#D4AF37] to-[#FFDF73] flex items-center justify-center shadow-[0_4px_24px_rgba(212,175,55,0.4)] mb-3">
-            <Sparkles className="w-7 h-7 text-slate-950" />
+        {/* High-Class GlassChat Hero Banner */}
+        <div className="relative mb-6 p-5 rounded-3xl bg-slate-950/80 border border-white/10 backdrop-blur-xl shadow-2xl overflow-hidden text-center flex flex-col items-center">
+          {/* Ambient Glow Orbs */}
+          <div className="absolute -top-10 -left-10 w-28 h-28 bg-cyan-500/20 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute -bottom-10 -right-10 w-28 h-28 bg-emerald-500/20 rounded-full blur-2xl pointer-events-none" />
+
+          {/* Logo Mark */}
+          <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#0F172A] to-[#1E293B] border border-cyan-400/40 flex items-center justify-center shadow-[0_0_25px_rgba(6,182,212,0.3)] mb-2.5">
+            <img src="/icon.svg" alt="GlassChat Logo" className="w-9 h-9 object-contain" />
           </div>
-          <h2 className="text-2xl font-extrabold font-display gold-text-gradient">
-            GlassChat Pro
-          </h2>
-          <p className="text-xs text-slate-400 mt-1 max-w-xs">
-            Private, End-to-End Encrypted Liquid Glass Communications
+
+          {/* Cyan to Emerald Text Gradient Title */}
+          <h1 className="text-3xl font-black tracking-tight bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400 bg-clip-text text-transparent mb-1">
+            GlassChat
+          </h1>
+
+          {/* Tagline: Clear as Glass, Class as Always */}
+          <p className="text-[11px] sm:text-xs font-extrabold text-gray-300 tracking-widest uppercase mb-3">
+            Clear as Glass, Class as Always
           </p>
+
+          {/* Feature Highlights Strip */}
+          <div className="flex flex-wrap items-center justify-center gap-1.5 pt-2 border-t border-white/10 w-full text-[10px] sm:text-[11px] font-semibold text-slate-300">
+            <span className="px-2.5 py-1 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 flex items-center gap-1">
+              <span>⚡ Crystal Clear WebRTC Calls</span>
+            </span>
+            <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 flex items-center gap-1">
+              <span>🔒 End-to-End Encrypted</span>
+            </span>
+            <span className="px-2.5 py-1 rounded-full bg-slate-800 text-slate-200 border border-white/10 flex items-center gap-1">
+              <span>📱 Full PWA Support</span>
+            </span>
+          </div>
         </div>
 
         {/* Mode Selector Tabs */}

@@ -49,6 +49,7 @@ import {
   DeliveryStatus,
 } from '../types';
 import { soundFx, VoiceRecorderHelper } from '../utils/audio';
+import { getChatWallpaperStyle } from '../utils/wallpapers';
 
 interface ChatWindowProps {
   chat?: Chat;
@@ -407,14 +408,25 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     >
       {/* Center Chat Main Section */}
       <div className="flex flex-col h-full flex-1 relative overflow-hidden">
-        {/* Background Grid Pattern */}
+        {/* Dynamic Chat Wallpaper Surface */}
         <div
-          className={`absolute inset-0 pointer-events-none transition-opacity ${
+          id="chat-window-wallpaper-surface"
+          className="absolute inset-0 pointer-events-none transition-all duration-500 z-0"
+          style={getChatWallpaperStyle(
+            currentUser.wallpaper || 'obsidian-matrix',
+            theme,
+            currentUser.wallpaperOpacity ?? 0.85
+          )}
+        />
+
+        {/* Ambient Theme Tone Overlay */}
+        <div
+          className={`absolute inset-0 pointer-events-none transition-opacity z-0 ${
             isSophisticatedDark
-              ? 'sophisticated-grid-bg opacity-35'
+              ? 'sophisticated-grid-bg opacity-20'
               : isGold
-              ? 'bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-amber-200/30 via-yellow-100/20 to-transparent opacity-50'
-              : 'bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-900/30 via-slate-900/50 to-transparent opacity-40'
+              ? 'bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-amber-100/20 via-yellow-50/10 to-transparent opacity-40'
+              : 'bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-900/20 via-slate-900/40 to-transparent opacity-30'
           }`}
         />
 

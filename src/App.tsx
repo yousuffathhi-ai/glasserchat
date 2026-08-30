@@ -15,6 +15,7 @@ import { SettingsView } from './components/SettingsView';
 import { AuthModal } from './components/AuthModal';
 import { PWAInstallModal } from './components/PWAInstallModal';
 import { InstallPwaBanner } from './components/InstallPwaBanner';
+import { IncomingCallOverlay } from './components/IncomingCallOverlay';
 
 import {
   Chat,
@@ -29,6 +30,7 @@ import {
 } from './types';
 import { soundFx } from './utils/audio';
 import { isPWAInstalled } from './utils/pwa';
+import { callSignaling, SignalingCallPayload } from './utils/signaling';
 import {
   getRegisteredUsers,
   getCurrentUser,
@@ -75,6 +77,7 @@ export default function App() {
 
   // Modals and Active Overlays
   const [activeCallSession, setActiveCallSession] = useState<CallSession | null>(null);
+  const [incomingCallSignal, setIncomingCallSignal] = useState<SignalingCallPayload | null>(null);
   const [viewingStoryId, setViewingStoryId] = useState<string | null>(null);
   const [isCreatingStory, setIsCreatingStory] = useState(false);
   const [isDocumentScannerOpen, setIsDocumentScannerOpen] = useState(false);
@@ -153,6 +156,54 @@ export default function App() {
     } else {
       setActiveChatId(null);
     }
+
+    // Set signaling user id
+    callSignaling.setCurrentUser(currentUser.id);
+
+    // Sync registered user to server backend
+    fetch('/api/contacts/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: currentUser.id,
+        name: currentUser.name,
+        username: currentUser.handle,
+        phone: currentUser.phone,
+        profilePic: currentUser.avatar,
+        status: currentUser.bio,
+      }),
+    }).catch((err) => console.warn('Server registration sync note:', err));
+  }, [currentUser?.id]);
+
+  // Real-time WebRTC Call Signaling listener
+  useEffect(() => {
+    const unsubscribe = callSignaling.subscribe((payload) => {
+      if (!currentUser) return;
+
+      // Handle Incoming Call Ring on User B
+      if (payload.receiverId === currentUser.id) {
+        if (payload.status === 'ringing') {
+          setIncomingCallSignal(payload);
+        } else if (payload.status === 'cancelled' || payload.status === 'rejected' || payload.status === 'ended') {
+          setIncomingCallSignal(null);
+        }
+      }
+
+      // Handle Call Status updates on User A (Caller)
+      if (payload.callerId === currentUser.id) {
+        if (payload.status === 'accepted') {
+          setActiveCallSession((prev) =>
+            prev ? { ...prev, status: 'connected' } : null
+          );
+        } else if (payload.status === 'rejected' || payload.status === 'ended') {
+          setActiveCallSession(null);
+        }
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, [currentUser?.id]);
 
   // Handle user registration
@@ -170,6 +221,20 @@ export default function App() {
     setRegisteredUsers(updatedUsers);
     setCurrentUser(newUser);
     setIsAuthModalOpen(false);
+
+    // Sync to server database
+    fetch('/api/contacts/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: newUser.id,
+        name: newUser.name,
+        username: newUser.handle,
+        phone: newUser.phone,
+        profilePic: newUser.avatar,
+        status: newUser.bio,
+      }),
+    }).catch(() => {});
   };
 
   // Handle user login / switch
@@ -368,16 +433,28 @@ export default function App() {
     });
   };
 
-  // 6. WebRTC Calls
-  const handleStartCall = (type: 'audio' | 'video') => {
+  // 6. WebRTC Calls & Real-Time Signaling
+  const handleStartCall = async (type: 'audio' | 'video') => {
     if (!activeChat || !currentUser) return;
     const partner =
       activeChat.participants.find((p) => p.id !== currentUser.id) || activeChat.participants[0];
 
     soundFx.playRingtone();
 
+    // Send real-time call ring signal to receiver
+    const signalPayload = await callSignaling.makeCall({
+      callerId: currentUser.id,
+      callerName: currentUser.name,
+      callerAvatar: currentUser.avatar,
+      callerPhone: currentUser.phone,
+      callerHandle: currentUser.handle,
+      receiverId: partner.id,
+      callType: type,
+      chatId: activeChat.id,
+    });
+
     setActiveCallSession({
-      id: `call-${Date.now()}`,
+      id: signalPayload.callId,
       chatId: activeChat.id,
       caller: partner,
       type,
@@ -390,7 +467,7 @@ export default function App() {
     });
   };
 
-  const handleStartCallWithContact = (contact: Contact, type: 'audio' | 'video') => {
+  const handleStartCallWithContact = async (contact: Contact, type: 'audio' | 'video') => {
     if (!currentUser) return;
     let chat = chats.find(
       (c) => c.type === 'direct' && c.participants.some((p) => p.id === contact.id)
@@ -414,8 +491,21 @@ export default function App() {
     setActiveTab('chats');
 
     soundFx.playRingtone();
+
+    // Send real-time call ring signal to receiver
+    const signalPayload = await callSignaling.makeCall({
+      callerId: currentUser.id,
+      callerName: currentUser.name,
+      callerAvatar: currentUser.avatar,
+      callerPhone: currentUser.phone,
+      callerHandle: currentUser.handle,
+      receiverId: contact.id,
+      callType: type,
+      chatId: chat.id,
+    });
+
     setActiveCallSession({
-      id: `call-${Date.now()}`,
+      id: signalPayload.callId,
       chatId: chat.id,
       caller: contact,
       type,
@@ -428,8 +518,66 @@ export default function App() {
     });
   };
 
+  // Handle Incoming Call acceptance from IncomingCallOverlay
+  const handleAcceptIncomingCall = (callData: SignalingCallPayload) => {
+    if (!currentUser) return;
+    callSignaling.acceptCall(callData.callId);
+    setIncomingCallSignal(null);
+
+    // Create or find caller contact
+    const callerContact: Contact = {
+      id: callData.callerId,
+      name: callData.callerName,
+      handle: callData.callerHandle || `@${callData.callerName.toLowerCase().replace(/\s+/g, '')}`,
+      avatar: callData.callerAvatar,
+      phone: callData.callerPhone,
+      status: 'online',
+      bio: 'GlassChat Call Partner',
+    };
+
+    let chat = chats.find(
+      (c) => c.type === 'direct' && c.participants.some((p) => p.id === callData.callerId)
+    );
+    if (!chat) {
+      chat = {
+        id: `chat-${callData.callerId}`,
+        name: callData.callerName,
+        handle: callerContact.handle,
+        avatar: callerContact.avatar,
+        type: 'direct',
+        participants: [currentUser, callerContact],
+        unreadCount: 0,
+        createdAt: new Date().toISOString(),
+      };
+      const updatedChats = [chat, ...chats];
+      setChats(updatedChats);
+      saveUserChats(currentUser.id, updatedChats);
+    }
+    setActiveChatId(chat.id);
+
+    setActiveCallSession({
+      id: callData.callId,
+      chatId: chat.id,
+      caller: callerContact,
+      type: callData.callType,
+      status: 'connected',
+      startTime: new Date().toISOString(),
+      isMuted: false,
+      isVideoEnabled: callData.callType === 'video',
+      isScreenSharing: false,
+      isWhiteboardOpen: false,
+    });
+  };
+
+  // Handle Incoming Call rejection
+  const handleRejectIncomingCall = (callData: SignalingCallPayload) => {
+    callSignaling.rejectCall(callData.callId);
+    setIncomingCallSignal(null);
+  };
+
   const handleEndCall = () => {
     if (activeCallSession && currentUser) {
+      callSignaling.endCall(activeCallSession.id);
       const newRecord: CallRecord = {
         id: `rec-${Date.now()}`,
         contactName: activeCallSession.caller.name,
@@ -751,6 +899,12 @@ export default function App() {
                 onSelectContactToChat={handleCreateDirectChat}
                 onStartCallWithContact={handleStartCallWithContact}
                 onOpenNewContactModal={() => setNewChatModalMode('direct')}
+                onAddNewContact={(contact) => {
+                  if (currentUser) {
+                    const updated = addContactToUser(currentUser.id, contact);
+                    setContacts(updated);
+                  }
+                }}
               />
             </div>
             <div className="hidden md:flex flex-1 items-center justify-center p-8 text-center border-l border-black/5 dark:border-white/5">
@@ -784,6 +938,13 @@ export default function App() {
       </div>
 
       {/* 3. Global Overlays & Modals */}
+      {/* Real-time WebRTC Incoming Call Ringing Overlay */}
+      <IncomingCallOverlay
+        incomingCall={incomingCallSignal}
+        onAcceptCall={handleAcceptIncomingCall}
+        onRejectCall={handleRejectIncomingCall}
+      />
+
       {/* PWA Install Modal */}
       {isPWAInstallModalOpen && (
         <PWAInstallModal

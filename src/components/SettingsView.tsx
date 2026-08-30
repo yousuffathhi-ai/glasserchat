@@ -19,9 +19,13 @@ import {
   Download,
   CheckCircle2,
   Monitor,
+  Image as ImageIcon,
+  Sliders,
+  Upload,
 } from 'lucide-react';
 import { ThemeMode, UserProfile } from '../types';
 import { isPWAInstalled } from '../utils/pwa';
+import { WALLPAPER_PRESETS, getChatWallpaperStyle } from '../utils/wallpapers';
 
 interface SettingsViewProps {
   currentUser: UserProfile;
@@ -52,14 +56,42 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [name, setName] = useState(currentUser.name);
   const [bio, setBio] = useState(currentUser.bio);
   const [handle, setHandle] = useState(currentUser.handle);
+  const [selectedWallpaper, setSelectedWallpaper] = useState(currentUser.wallpaper || 'obsidian-matrix');
+  const [wallpaperOpacity, setWallpaperOpacity] = useState(currentUser.wallpaperOpacity ?? 0.85);
+  const [customImageUrl, setCustomImageUrl] = useState('');
+  const [showCustomInput, setShowCustomInput] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [e2eeAlwaysOn, setE2eeAlwaysOn] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
 
   const handleSave = () => {
-    onUpdateProfile({ name, bio, handle });
+    onUpdateProfile({ 
+      name, 
+      bio, 
+      handle,
+      wallpaper: selectedWallpaper,
+      wallpaperOpacity: Number(wallpaperOpacity),
+    });
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2000);
+  };
+
+  const handleSelectWallpaper = (wpId: string) => {
+    setSelectedWallpaper(wpId);
+    onUpdateProfile({ wallpaper: wpId, wallpaperOpacity });
+  };
+
+  const handleOpacityChange = (val: number) => {
+    setWallpaperOpacity(val);
+    onUpdateProfile({ wallpaper: selectedWallpaper, wallpaperOpacity: val });
+  };
+
+  const handleApplyCustomUrl = () => {
+    if (customImageUrl.trim()) {
+      setSelectedWallpaper(customImageUrl.trim());
+      onUpdateProfile({ wallpaper: customImageUrl.trim(), wallpaperOpacity });
+      setShowCustomInput(false);
+    }
   };
 
   return (
@@ -276,6 +308,119 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <Moon className="w-5 h-5 text-emerald-400" />
               <span className="text-[11px] font-bold text-center">Dark Emerald</span>
             </button>
+          </div>
+        </div>
+
+        {/* ==================== CHAT WALLPAPER & BACKGROUNDS ==================== */}
+        <div
+          className={`p-5 rounded-3xl border space-y-4 ${
+            isSophisticatedDark
+              ? 'bg-[#16191E] border-[#D4AF37]/35'
+              : isGold
+              ? 'bg-white/80 border-[#D4AF37]/40 shadow-sm'
+              : 'bg-[#121619]/80 border-emerald-500/30'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center space-x-1.5">
+                <ImageIcon className="w-3.5 h-3.5 text-[#D4AF37]" />
+                <span>Chat Wallpaper & Patterns</span>
+              </h3>
+              <p className="text-[10px] text-slate-400 mt-0.5">
+                Stored in your profile & rendered on the ChatWindow surface
+              </p>
+            </div>
+            <button
+              onClick={() => setShowCustomInput(!showCustomInput)}
+              className="text-[11px] font-bold text-[#D4AF37] hover:underline flex items-center space-x-1"
+            >
+              <Upload className="w-3 h-3" />
+              <span>{showCustomInput ? 'Presets' : 'Custom URL'}</span>
+            </button>
+          </div>
+
+          {/* Custom URL Input if active */}
+          {showCustomInput && (
+            <div className="p-3 rounded-2xl bg-black/30 border border-[#D4AF37]/30 space-y-2">
+              <label className="text-[11px] font-bold text-slate-300">Custom Image / Pattern URL</label>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="url"
+                  value={customImageUrl}
+                  onChange={(e) => setCustomImageUrl(e.target.value)}
+                  placeholder="https://images.unsplash.com/photo-..."
+                  className="flex-1 p-2 rounded-xl text-xs bg-slate-900 border border-white/10 text-white outline-none focus:border-[#D4AF37]"
+                />
+                <button
+                  type="button"
+                  onClick={handleApplyCustomUrl}
+                  className="px-3 py-2 rounded-xl bg-[#D4AF37] text-slate-950 font-bold text-xs hover:brightness-105"
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Preset Wallpaper Thumbnails Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            {WALLPAPER_PRESETS.map((preset) => {
+              const isSelected = selectedWallpaper === preset.id;
+              return (
+                <div
+                  key={preset.id}
+                  onClick={() => handleSelectWallpaper(preset.id)}
+                  className={`group relative rounded-2xl overflow-hidden cursor-pointer border-2 transition-all p-1 flex flex-col items-center text-center ${
+                    isSelected
+                      ? 'border-[#D4AF37] ring-2 ring-[#D4AF37]/50 shadow-[0_0_15px_rgba(212,175,55,0.3)] scale-[1.02]'
+                      : 'border-white/10 hover:border-white/30 opacity-75 hover:opacity-100'
+                  }`}
+                >
+                  <div className="w-full h-16 rounded-xl overflow-hidden relative mb-1.5 shadow-inner">
+                    <img
+                      src={preset.thumbnailUrl}
+                      alt={preset.name}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    />
+                    {isSelected && (
+                      <div className="absolute inset-0 bg-[#D4AF37]/30 backdrop-blur-[1px] flex items-center justify-center">
+                        <div className="w-5 h-5 rounded-full bg-[#D4AF37] text-slate-950 flex items-center justify-center shadow-md">
+                          <Check className="w-3 h-3 stroke-[3]" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-200 truncate w-full px-1">
+                    {preset.name}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Wallpaper Dimming / Opacity Controller */}
+          <div className="pt-2 border-t border-white/5 space-y-1.5">
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="font-semibold text-slate-300 flex items-center gap-1">
+                <Sliders className="w-3 h-3 text-[#D4AF37]" />
+                <span>Wallpaper Pattern Intensity</span>
+              </span>
+              <span className="font-bold text-[#D4AF37]">{Math.round(wallpaperOpacity * 100)}%</span>
+            </div>
+            <input
+              type="range"
+              min="0.2"
+              max="1"
+              step="0.05"
+              value={wallpaperOpacity}
+              onChange={(e) => handleOpacityChange(parseFloat(e.target.value))}
+              className="w-full accent-[#D4AF37] cursor-pointer h-1.5 bg-slate-800 rounded-lg"
+            />
+            <p className="text-[9px] text-slate-400">
+              High contrast text protection active: message bubbles automatically adjust for flawless legibility in both dark & light themes.
+            </p>
           </div>
         </div>
 
