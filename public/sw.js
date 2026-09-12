@@ -1,9 +1,7 @@
-// GlassChat Pro - Progressive Web App Service Worker
+// GlasserChat - Progressive Web App Service Worker
 // Developed by PGV Creation
-const CACHE_NAME = 'glasschat-pgv-v1.3.0';
+const CACHE_NAME = 'glasserchat-v2.0.1';
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
   '/manifest.json',
   '/manifest.webmanifest',
   '/icon.svg',
@@ -15,9 +13,9 @@ const STATIC_ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[GlassChat SW] Caching app shell and static assets...');
+      console.log('[GlasserChat SW] Caching core static assets...');
       return cache.addAll(STATIC_ASSETS).catch((err) => {
-        console.warn('[GlassChat SW] Partial precache notice:', err);
+        console.warn('[GlasserChat SW] Partial precache notice:', err);
       });
     })
   );
@@ -31,7 +29,7 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         keys.map((key) => {
           if (key !== CACHE_NAME) {
-            console.log('[GlassChat SW] Removing old cache:', key);
+            console.log('[GlasserChat SW] Purging old cache:', key);
             return caches.delete(key);
           }
         })
@@ -41,7 +39,7 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// 3. Fetch Event: Stale-While-Revalidate with strict exclusions
+// 3. Fetch Event: Strict bypass for development & modules
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   const url = new URL(request.url);
@@ -51,11 +49,18 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Strictly exclude WebSockets, Realtime endpoints, WebRTC & API routes
+  // Strictly exclude Vite dev server, native ES modules, API, and Realtime routes
   if (
     url.protocol === 'ws:' ||
     url.protocol === 'wss:' ||
     url.pathname.startsWith('/api/') ||
+    url.pathname.includes('/src/') ||
+    url.pathname.includes('/node_modules/') ||
+    url.pathname.startsWith('/@') ||
+    url.pathname.includes('.vite') ||
+    url.pathname.endsWith('.ts') ||
+    url.pathname.endsWith('.tsx') ||
+    url.pathname.endsWith('.jsx') ||
     url.pathname.includes('/socket.io/') ||
     url.pathname.includes('/realtime/') ||
     url.pathname.includes('/rtc/') ||

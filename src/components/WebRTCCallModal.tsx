@@ -18,8 +18,11 @@ import {
   CheckCircle2,
   Trash2,
   X,
+  Wifi,
+  SwitchCamera,
 } from 'lucide-react';
 import { CallSession, ThemeMode, UserProfile } from '../types';
+import { webrtcPeer } from '../utils/webrtcPeer';
 
 interface WebRTCCallModalProps {
   callSession: CallSession;
@@ -38,6 +41,7 @@ export const WebRTCCallModal: React.FC<WebRTCCallModalProps> = ({
 }) => {
   const isGold = theme === 'gold-light';
   const localVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const screenVideoRef = useRef<HTMLVideoElement>(null);
   const whiteboardCanvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -49,6 +53,8 @@ export const WebRTCCallModal: React.FC<WebRTCCallModalProps> = ({
   const [isNoiseCancellation, setIsNoiseCancellation] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
+  const [hasRemoteStream, setHasRemoteStream] = useState(false);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [drawingColor, setDrawingColor] = useState('#D4AF37');
   const [drawingWidth, setDrawingWidth] = useState(3);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -59,11 +65,7 @@ export const WebRTCCallModal: React.FC<WebRTCCallModalProps> = ({
   } | null>(null);
   const [isGeneratingAiMinutes, setIsGeneratingAiMinutes] = useState(false);
 
-  // Local media stream ref
-  const localStreamRef = useRef<MediaStream | null>(null);
-  const screenStreamRef = useRef<MediaStream | null>(null);
-
-  // Call timer
+  // Call duration timer
   useEffect(() => {
     const timer = setInterval(() => {
       setCallDuration((prev) => prev + 1);
@@ -71,78 +73,111 @@ export const WebRTCCallModal: React.FC<WebRTCCallModalProps> = ({
     return () => clearInterval(timer);
   }, []);
 
-  // Initialize camera and mic
+  // Initialize WebRTC PeerJS Calling Engine
   useEffect(() => {
-    async function initMedia() {
+    let isCancelled = false;
+
+    async function setupPeerCall() {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: callSession.type === 'video',
-          audio: true,
+        await webrtcPeer.init(currentUser.id);
+        if (isCancelled) return;
+
+        const localStream = await webrtcPeer.getLocalStream(callSession.type);
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = localStream;
+        }
+
+        // Listen for remote WebRTC stream
+        webrtcPeer.onRemoteStream((remoteStream) => {
+          if (isCancelled) return;
+          setHasRemoteStream(true);
+          if (remoteVideoRef.current) {
+            remoteVideoRef.current.srcObject = remoteStream;
+          }
         });
-        localStreamRef.current = stream;
+
+        webrtcPeer.onCallClosed(() => {
+          if (!isCancelled) {
+            onEndCall();
+          }
+        });
+
+        // Determine remote partner ID
+        const targetUserId = callSession.caller.id;
+        if (targetUserId && targetUserId !== currentUser.id) {
+          // Caller initiates PeerJS call to remote peer
+          webrtcPeer.callUser(targetUserId, localStream);
+        } else {
+          // Receiver answers call
+          webrtcPeer.answerCall(localStream);
+        }
+      } catch (err) {
+        console.warn('WebRTC PeerJS initialization fallback:', err);
+      }
+    }
+
+    setupPeerCall();
+
+    return () => {
+      isCancelled = true;
+      webrtcPeer.endCall();
+    };
+  }, [currentUser.id, callSession.caller.id, callSession.type]);
+
+  // Toggle Video Track
+  const handleToggleVideo = () => {
+    const enabled = webrtcPeer.toggleVideo();
+    setIsVideoOn(enabled);
+  };
+
+  // Toggle Mic Track
+  const handleToggleMic = () => {
+    const enabled = webrtcPeer.toggleMic();
+    setIsMuted(!enabled);
+  };
+
+  // Camera Switch (Front/Back)
+  const handleSwitchCamera = async () => {
+    const nextMode = facingMode === 'user' ? 'environment' : 'user';
+    setFacingMode(nextMode);
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: nextMode },
+          audio: !isMuted,
+        });
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = stream;
         }
-      } catch (err) {
-        console.warn('Camera/Mic access simulated fallback:', err);
       }
+    } catch (err) {
+      console.warn('Switch camera error or fallback:', err);
     }
-    initMedia();
-
-    return () => {
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach((t) => t.stop());
-      }
-      if (screenStreamRef.current) {
-        screenStreamRef.current.getTracks().forEach((t) => t.stop());
-      }
-    };
-  }, [callSession.type]);
-
-  // Toggle Video
-  const handleToggleVideo = () => {
-    if (localStreamRef.current) {
-      const videoTrack = localStreamRef.current.getVideoTracks()[0];
-      if (videoTrack) {
-        videoTrack.enabled = !videoTrack.enabled;
-      }
-    }
-    setIsVideoOn(!isVideoOn);
   };
 
-  // Toggle Mic
-  const handleToggleMic = () => {
-    if (localStreamRef.current) {
-      const audioTrack = localStreamRef.current.getAudioTracks()[0];
-      if (audioTrack) {
-        audioTrack.enabled = !audioTrack.enabled;
-      }
-    }
-    setIsMuted(!isMuted);
-  };
-
-  // Screen Sharing
+  // Screen Sharing via PeerJS
   const handleToggleScreenShare = async () => {
     if (!isScreenSharing) {
-      try {
-        const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-        screenStreamRef.current = screenStream;
+      const screenStream = await webrtcPeer.startScreenShare();
+      if (screenStream) {
         if (screenVideoRef.current) {
           screenVideoRef.current.srcObject = screenStream;
         }
         setIsScreenSharing(true);
         screenStream.getVideoTracks()[0].onended = () => {
           setIsScreenSharing(false);
+          webrtcPeer.stopScreenShare();
         };
-      } catch (e) {
-        console.warn('Screen share cancelled/failed:', e);
       }
     } else {
-      if (screenStreamRef.current) {
-        screenStreamRef.current.getTracks().forEach((t) => t.stop());
-      }
+      webrtcPeer.stopScreenShare();
       setIsScreenSharing(false);
     }
+  };
+
+  const handleEndCall = () => {
+    webrtcPeer.endCall();
+    onEndCall();
   };
 
   // Whiteboard drawing handlers
@@ -324,25 +359,51 @@ export const WebRTCCallModal: React.FC<WebRTCCallModalProps> = ({
               </span>
             </div>
           ) : (
-            /* 3. Standard 1-on-1 / Group Video Stage */
-            <div className="w-full h-full grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Remote Caller Video */}
-              <div className="relative rounded-3xl overflow-hidden bg-slate-900 flex items-center justify-center border border-white/10 shadow-2xl">
-                <img
-                  src={callSession.caller.avatar}
-                  alt={callSession.caller.name}
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover filter brightness-95"
+            /* 3. IMO-STYLE FULLSCREEN CALL SCREEN: Remote full background with top-right PIP */
+            <div className="relative w-full h-full rounded-2xl overflow-hidden bg-black flex items-center justify-center">
+              {/* Fullscreen Remote Video Stream */}
+              <div className="absolute inset-0 flex items-center justify-center bg-black">
+                <video
+                  ref={remoteVideoRef}
+                  autoPlay
+                  playsInline
+                  className={`w-full h-full object-cover ${hasRemoteStream ? 'block' : 'hidden'}`}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
-                <div className="absolute bottom-4 left-4 flex items-center space-x-2 text-white">
-                  <span className="text-xs font-bold">{callSession.caller.name}</span>
-                  <Volume2 className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-                </div>
+                {!hasRemoteStream && (
+                  <div className="relative w-full h-full flex flex-col items-center justify-center">
+                    <img
+                      src={callSession.caller.avatar}
+                      alt={callSession.caller.name}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover filter brightness-50 blur-md scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/60" />
+                    <div className="absolute flex flex-col items-center text-center p-6">
+                      <div className="relative mb-4">
+                        <img
+                          src={callSession.caller.avatar}
+                          alt={callSession.caller.name}
+                          referrerPolicy="no-referrer"
+                          className="w-28 h-28 rounded-full object-cover ring-4 ring-[#D4AF37] shadow-2xl"
+                        />
+                        <span className="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-emerald-500 ring-4 ring-black flex items-center justify-center">
+                          <Wifi className="w-3.5 h-3.5 text-white" />
+                        </span>
+                      </div>
+                      <h3 className="text-2xl font-bold text-white mb-1">{callSession.caller.name}</h3>
+                      <span className="text-xs font-semibold text-emerald-400 bg-emerald-950/70 border border-emerald-500/40 px-3 py-1 rounded-full backdrop-blur-md flex items-center">
+                        <Radio className="w-3 h-3 mr-1.5 animate-pulse" /> IMO HD Encrypted Call Connected
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Local Video Preview */}
-              <div className="relative rounded-3xl overflow-hidden bg-slate-900 flex items-center justify-center border border-white/10 shadow-2xl">
+              {/* Floating Self-View PIP Window at Top-Right (IMO Style) */}
+              <div
+                className="absolute top-4 right-4 w-28 h-38 sm:w-36 sm:h-48 md:w-44 md:h-56 rounded-2xl overflow-hidden shadow-2xl border-2 border-white/40 z-30 bg-slate-900 cursor-pointer hover:scale-105 transition-transform"
+                title="Your Camera (PIP Self-View)"
+              >
                 {isVideoOn ? (
                   <video
                     ref={localVideoRef}
@@ -352,20 +413,26 @@ export const WebRTCCallModal: React.FC<WebRTCCallModalProps> = ({
                     className="w-full h-full object-cover transform -scale-x-100"
                   />
                 ) : (
-                  <div className="flex flex-col items-center space-y-3">
+                  <div className="w-full h-full flex flex-col items-center justify-center p-2 bg-slate-900 text-center">
                     <img
                       src={currentUser.avatar}
                       alt={currentUser.name}
                       referrerPolicy="no-referrer"
-                      className="w-24 h-24 rounded-3xl object-cover ring-4 ring-[#D4AF37]/60 shadow-xl"
+                      className="w-12 h-12 rounded-full object-cover ring-2 ring-[#D4AF37] mb-1"
                     />
-                    <span className="text-sm font-bold text-slate-300">{currentUser.name} (You)</span>
+                    <span className="text-[10px] font-bold text-slate-300">You (Off)</span>
                   </div>
                 )}
-                <div className="absolute bottom-4 left-4 flex items-center space-x-2 text-white">
-                  <span className="text-xs font-bold">You</span>
-                  {isMuted && <MicOff className="w-3.5 h-3.5 text-rose-500" />}
+                <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-0.5 rounded-full text-[10px] text-white flex items-center space-x-1">
+                  <span>You</span>
+                  {isMuted && <MicOff className="w-2.5 h-2.5 text-rose-400" />}
                 </div>
+              </div>
+
+              {/* Remote User Name Pill at bottom left */}
+              <div className="absolute bottom-24 left-6 z-20 flex items-center space-x-2 text-white bg-black/60 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/10">
+                <span className="text-xs font-bold">{callSession.caller.name}</span>
+                <Volume2 className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
               </div>
             </div>
           )}
@@ -406,31 +473,43 @@ export const WebRTCCallModal: React.FC<WebRTCCallModalProps> = ({
           </div>
         )}
 
-        {/* Bottom Floating Glass Controls Bar */}
+        {/* IMO-Style Bottom Overlay Controls: Mute Mic, Camera Switch, Camera Off, and Red End Call Button */}
         <div className="absolute bottom-6 inset-x-0 z-30 flex items-center justify-center space-x-3 px-4">
-          <div className="flex items-center space-x-2 md:space-x-3 p-2 md:p-3 rounded-full bg-slate-900/85 border border-[#D4AF37]/40 shadow-2xl backdrop-blur-2xl">
-            {/* Mic Button */}
+          <div className="flex items-center space-x-3 p-3 rounded-full bg-slate-950/85 border border-white/20 shadow-2xl backdrop-blur-2xl">
+            {/* 1. Mute Mic Button */}
             <button
+              id="call-toggle-mic-btn"
               onClick={handleToggleMic}
-              className={`p-3.5 rounded-full transition-transform hover:scale-110 ${
+              className={`p-3.5 rounded-full transition-all hover:scale-110 active:scale-95 ${
                 isMuted
-                  ? 'bg-rose-500 text-white'
+                  ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/30'
                   : 'bg-white/15 text-white hover:bg-white/25'
               }`}
-              title={isMuted ? 'Unmute Microphone' : 'Mute Microphone'}
+              title={isMuted ? 'Unmute Mic' : 'Mute Mic'}
             >
               {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
             </button>
 
-            {/* Video Button */}
+            {/* 2. Camera Switch Button (IMO style flip camera) */}
             <button
+              id="call-switch-camera-btn"
+              onClick={handleSwitchCamera}
+              className="p-3.5 rounded-full bg-white/15 text-white hover:bg-white/25 transition-all hover:scale-110 active:scale-95"
+              title="Switch Camera (Front/Back)"
+            >
+              <SwitchCamera className="w-5 h-5" />
+            </button>
+
+            {/* 3. Camera Off / Video Toggle Button */}
+            <button
+              id="call-toggle-video-btn"
               onClick={handleToggleVideo}
-              className={`p-3.5 rounded-full transition-transform hover:scale-110 ${
+              className={`p-3.5 rounded-full transition-all hover:scale-110 active:scale-95 ${
                 !isVideoOn
-                  ? 'bg-rose-500 text-white'
+                  ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/30'
                   : 'bg-white/15 text-white hover:bg-white/25'
               }`}
-              title={isVideoOn ? 'Turn Off Camera' : 'Turn On Camera'}
+              title={isVideoOn ? 'Turn Camera Off' : 'Turn Camera On'}
             >
               {isVideoOn ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
             </button>
@@ -438,12 +517,12 @@ export const WebRTCCallModal: React.FC<WebRTCCallModalProps> = ({
             {/* Screen Share Button */}
             <button
               onClick={handleToggleScreenShare}
-              className={`p-3.5 rounded-full transition-transform hover:scale-110 ${
+              className={`p-3.5 rounded-full transition-all hover:scale-110 hidden sm:flex ${
                 isScreenSharing
                   ? 'bg-emerald-500 text-slate-950 font-bold'
                   : 'bg-white/15 text-white hover:bg-white/25'
               }`}
-              title="Screen Share Studio"
+              title="Share Screen"
             >
               <Monitor className="w-5 h-5" />
             </button>
@@ -451,48 +530,24 @@ export const WebRTCCallModal: React.FC<WebRTCCallModalProps> = ({
             {/* Whiteboard Button */}
             <button
               onClick={() => setIsWhiteboardOpen(!isWhiteboardOpen)}
-              className={`p-3.5 rounded-full transition-transform hover:scale-110 ${
+              className={`p-3.5 rounded-full transition-all hover:scale-110 hidden sm:flex ${
                 isWhiteboardOpen
                   ? 'bg-[#D4AF37] text-slate-950 font-bold'
                   : 'bg-white/15 text-white hover:bg-white/25'
               }`}
-              title="Interactive Collaborative Whiteboard"
+              title="Collaborative Whiteboard"
             >
               <Edit3 className="w-5 h-5" />
             </button>
 
-            {/* Noise Cancellation toggle */}
-            <button
-              onClick={() => setIsNoiseCancellation(!isNoiseCancellation)}
-              className={`p-3.5 rounded-full transition-transform hover:scale-110 ${
-                isNoiseCancellation
-                  ? 'bg-emerald-600/60 text-emerald-300'
-                  : 'bg-white/15 text-white'
-              }`}
-              title="Noise Cancellation Filter"
-            >
-              {isNoiseCancellation ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
-            </button>
-
-            {/* Live Call Record toggle */}
-            <button
-              onClick={() => setIsRecording(!isRecording)}
-              className={`p-3.5 rounded-full transition-transform hover:scale-110 ${
-                isRecording ? 'bg-rose-600 text-white animate-pulse' : 'bg-white/15 text-white'
-              }`}
-              title="Record Call"
-            >
-              <Disc className="w-5 h-5" />
-            </button>
-
-            {/* End Call Button */}
+            {/* 4. Red End Call Button */}
             <button
               id="webrtc-end-call-btn"
-              onClick={onEndCall}
-              className="p-3.5 rounded-full bg-rose-600 text-white font-bold transition-transform hover:scale-110 shadow-lg hover:bg-rose-700 ml-2"
+              onClick={handleEndCall}
+              className="p-4 rounded-full bg-rose-600 text-white font-bold transition-all hover:scale-110 shadow-xl shadow-rose-600/40 hover:bg-rose-700 active:scale-95 ml-1"
               title="End Call"
             >
-              <PhoneOff className="w-5 h-5" />
+              <PhoneOff className="w-6 h-6" />
             </button>
           </div>
         </div>

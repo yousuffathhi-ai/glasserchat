@@ -32,8 +32,134 @@ function setItem<T>(key: string, value: T): void {
 
 // ==================== USER & AUTH STORAGE ====================
 
+export const DEFAULT_INITIAL_USER: UserProfile = {
+  id: 'user-alex-rivera',
+  name: 'Alex Rivera',
+  handle: '@alex_rivera',
+  email: 'alex@glasserchat.com',
+  phone: '+14155550111',
+  bio: 'Exploring GlasserChat ✨',
+  avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80',
+  status: 'online',
+  customStatusText: 'Available ✨',
+  wallpaper: 'liquid-gold',
+  theme: 'sophisticated-dark',
+  bubbleStyle: 'liquid-glass',
+  fontSize: 'base',
+  disappearingTimerDefault: 0,
+  incognitoMode: false,
+  readReceipts: true,
+  lastSeenPrivacy: 'everyone',
+  profilePhotoPrivacy: 'everyone',
+  biometricLockEnabled: false,
+  pinLock: '1234',
+  fakePin: '0000',
+  blockedUserIds: [],
+  autoResponderEnabled: false,
+  autoResponderMessage: 'Thanks for reaching out! I will get back to you shortly.',
+  autoResponderHours: { start: '18:00', end: '09:00' },
+  notificationsEnabled: true,
+  soundEnabled: true,
+};
+
+export const SEED_REGISTERED_USERS: UserProfile[] = [
+  DEFAULT_INITIAL_USER,
+  {
+    id: 'user-elena-vance',
+    name: 'Elena Vance',
+    handle: '@elena_vance',
+    email: 'elena@glasserchat.com',
+    phone: '+14155550198',
+    bio: 'Exploring Liquid Glass & WebRTC 4K 🔮',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
+    status: 'online',
+    customStatusText: 'Online',
+    wallpaper: 'emerald-aurora',
+    theme: 'sophisticated-dark',
+    bubbleStyle: 'liquid-glass',
+    fontSize: 'base',
+    disappearingTimerDefault: 0,
+    incognitoMode: false,
+    readReceipts: true,
+    lastSeenPrivacy: 'everyone',
+    profilePhotoPrivacy: 'everyone',
+    biometricLockEnabled: false,
+    pinLock: '1234',
+    fakePin: '0000',
+    blockedUserIds: [],
+    autoResponderEnabled: false,
+    autoResponderMessage: 'In a meeting.',
+    autoResponderHours: { start: '18:00', end: '09:00' },
+    notificationsEnabled: true,
+    soundEnabled: true,
+  },
+  {
+    id: 'user-marcus-sterling',
+    name: 'Marcus Sterling',
+    handle: '@marcus_sterling',
+    email: 'marcus@glasserchat.com',
+    phone: '+14155550142',
+    bio: 'Product Design & Architecture ⚡',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
+    status: 'online',
+    customStatusText: 'Designing...',
+    wallpaper: 'obsidian-matrix',
+    theme: 'sophisticated-dark',
+    bubbleStyle: 'liquid-glass',
+    fontSize: 'base',
+    disappearingTimerDefault: 0,
+    incognitoMode: false,
+    readReceipts: true,
+    lastSeenPrivacy: 'everyone',
+    profilePhotoPrivacy: 'everyone',
+    biometricLockEnabled: false,
+    pinLock: '1234',
+    fakePin: '0000',
+    blockedUserIds: [],
+    autoResponderEnabled: false,
+    autoResponderMessage: 'Busy.',
+    autoResponderHours: { start: '18:00', end: '09:00' },
+    notificationsEnabled: true,
+    soundEnabled: true,
+  },
+  {
+    id: 'user-mom',
+    name: 'Mom ❤️',
+    handle: '@mom_home',
+    email: 'mom@home.com',
+    phone: '+15550123456',
+    bio: 'Always there for you! Call me anytime ❤️',
+    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&auto=format&fit=crop&q=80',
+    status: 'online',
+    customStatusText: 'At home',
+    wallpaper: 'rose-quartz',
+    theme: 'sophisticated-dark',
+    bubbleStyle: 'liquid-glass',
+    fontSize: 'base',
+    disappearingTimerDefault: 0,
+    incognitoMode: false,
+    readReceipts: true,
+    lastSeenPrivacy: 'everyone',
+    profilePhotoPrivacy: 'everyone',
+    biometricLockEnabled: false,
+    pinLock: '1234',
+    fakePin: '0000',
+    blockedUserIds: [],
+    autoResponderEnabled: false,
+    autoResponderMessage: 'Call me!',
+    autoResponderHours: { start: '18:00', end: '09:00' },
+    notificationsEnabled: true,
+    soundEnabled: true,
+  },
+];
+
 export function getRegisteredUsers(): UserProfile[] {
-  return getItem<UserProfile[]>(STORAGE_KEYS.REGISTERED_USERS, []);
+  const users = getItem<UserProfile[]>(STORAGE_KEYS.REGISTERED_USERS, []);
+  if (!users || users.length === 0) {
+    saveRegisteredUsers(SEED_REGISTERED_USERS);
+    return SEED_REGISTERED_USERS;
+  }
+  return users;
 }
 
 export function saveRegisteredUsers(users: UserProfile[]): void {
@@ -60,11 +186,16 @@ export function setCurrentUserId(userId: string | null): void {
   }
 }
 
-export function getCurrentUser(): UserProfile | null {
+export function getCurrentUser(): UserProfile {
   const currentId = getCurrentUserId();
-  if (!currentId) return null;
   const users = getRegisteredUsers();
-  return users.find((u) => u.id === currentId) || null;
+  if (currentId) {
+    const found = users.find((u) => u.id === currentId);
+    if (found) return found;
+  }
+  const defaultUser = users[0] || DEFAULT_INITIAL_USER;
+  setCurrentUserId(defaultUser.id);
+  return defaultUser;
 }
 
 export function registerUser(userData: {
@@ -213,6 +344,12 @@ export function saveChatMessages(chatId: string, messages: Message[]): void {
 export function appendChatMessage(chatId: string, message: Message): void {
   const current = getChatMessages(chatId);
   const updated = [...current, message];
+  saveChatMessages(chatId, updated);
+}
+
+export function updateChatMessageStatus(chatId: string, messageId: string, status: 'sent' | 'delivered' | 'read'): void {
+  const current = getChatMessages(chatId);
+  const updated = current.map((m) => (m.id === messageId ? { ...m, status } : m));
   saveChatMessages(chatId, updated);
 }
 

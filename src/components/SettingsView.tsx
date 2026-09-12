@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   User,
   Sun,
@@ -28,7 +28,7 @@ import { isPWAInstalled } from '../utils/pwa';
 import { WALLPAPER_PRESETS, getChatWallpaperStyle } from '../utils/wallpapers';
 
 interface SettingsViewProps {
-  currentUser: UserProfile;
+  currentUser?: UserProfile | null;
   registeredUsers?: UserProfile[];
   theme: ThemeMode;
   onUpdateTheme: (theme: ThemeMode) => void;
@@ -53,16 +53,26 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const isSophisticatedDark = theme === 'sophisticated-dark';
   const isGold = theme === 'gold-light';
   const isInstalled = isPWAInstalled();
-  const [name, setName] = useState(currentUser.name);
-  const [bio, setBio] = useState(currentUser.bio);
-  const [handle, setHandle] = useState(currentUser.handle);
-  const [selectedWallpaper, setSelectedWallpaper] = useState(currentUser.wallpaper || 'obsidian-matrix');
-  const [wallpaperOpacity, setWallpaperOpacity] = useState(currentUser.wallpaperOpacity ?? 0.85);
+  const [name, setName] = useState(currentUser?.name || 'Alex Rivera');
+  const [bio, setBio] = useState(currentUser?.bio || 'Exploring GlasserChat ✨');
+  const [handle, setHandle] = useState(currentUser?.handle || '@alex_rivera');
+  const [selectedWallpaper, setSelectedWallpaper] = useState(currentUser?.wallpaper || 'obsidian-matrix');
+  const [wallpaperOpacity, setWallpaperOpacity] = useState(currentUser?.wallpaperOpacity ?? 0.85);
   const [customImageUrl, setCustomImageUrl] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [e2eeAlwaysOn, setE2eeAlwaysOn] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
+
+  useEffect(() => {
+    if (currentUser) {
+      setName(currentUser.name);
+      setBio(currentUser.bio || '');
+      setHandle(currentUser.handle);
+      setSelectedWallpaper(currentUser.wallpaper || 'obsidian-matrix');
+      setWallpaperOpacity(currentUser.wallpaperOpacity ?? 0.85);
+    }
+  }, [currentUser?.id]);
 
   const handleSave = () => {
     onUpdateProfile({ 
@@ -132,8 +142,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <div className="relative group cursor-pointer">
               <div className="w-16 h-16 rounded-2xl border-2 border-[#D4AF37] p-0.5">
                 <img
-                  src={currentUser.avatar}
-                  alt={currentUser.name}
+                  src={currentUser?.avatar || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400'}
+                  alt={currentUser?.name || 'User'}
                   referrerPolicy="no-referrer"
                   className="w-full h-full rounded-[14px] object-cover"
                 />

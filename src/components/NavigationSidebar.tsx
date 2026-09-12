@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   MessageSquare,
   Radio,
@@ -14,13 +14,14 @@ import {
   Download,
 } from 'lucide-react';
 import { ThemeMode, UserProfile, OnlineStatus, NavigationTab } from '../types';
+import { isPWAInstalled } from '../utils/pwa';
 
 interface NavigationSidebarProps {
   activeTab: NavigationTab;
   onSelectTab: (tab: NavigationTab) => void;
   theme: ThemeMode;
   onToggleTheme: () => void;
-  currentUser: UserProfile;
+  currentUser?: UserProfile | null;
   unreadTotalCount?: number;
   missedCallsCount?: number;
   unviewedStoriesCount?: number;
@@ -53,7 +54,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   return (
     <aside
       id="main-navigation-sidebar"
-      className={`flex flex-col items-center justify-between py-5 px-3 z-30 transition-all duration-300 ${
+      className={`hidden md:flex flex-col items-center justify-between py-5 px-3 z-30 transition-all duration-300 ${
         isSophisticatedDark
           ? 'bg-[#0E1013]/95 border-r border-[#D4AF37]/20 shadow-[4px_0_30px_rgba(0,0,0,0.6)] backdrop-blur-2xl text-slate-200'
           : isGold
@@ -66,7 +67,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         <div
           id="brand-logo-container"
           className="relative group cursor-pointer"
-          title="GlassChat Pro — Sophisticated Dark Edition"
+          title="GlasserChat — Next-Gen Encrypted Messenger"
           onClick={() => onSelectTab('chats')}
         >
           <div
@@ -114,12 +115,12 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
             )}
           </button>
 
-          {/* Contacts Tab */}
+          {/* Updates Tab (Status + Channels) */}
           <button
-            id="nav-tab-contacts"
-            onClick={() => onSelectTab('contacts')}
+            id="nav-tab-updates"
+            onClick={() => onSelectTab('updates')}
             className={`relative p-3 rounded-2xl transition-all duration-200 group ${
-              activeTab === 'contacts'
+              activeTab === 'updates' || activeTab === 'status'
                 ? isSophisticatedDark
                   ? 'bg-gradient-to-br from-[#D4AF37] to-[#B8860B] text-white shadow-[0_4px_20px_rgba(212,175,55,0.35)] border border-[#FFDF73]/40'
                   : isGold
@@ -131,7 +132,35 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
                 ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/80'
                 : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
             }`}
-            title="Encrypted Address Book"
+            title="Updates & Channels"
+          >
+            <Radio className="w-5 h-5 transition-transform group-hover:scale-110" />
+            {unviewedStoriesCount > 0 && (
+              <span className="absolute top-1 right-1 flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400"></span>
+              </span>
+            )}
+          </button>
+
+          {/* Communities Tab */}
+          <button
+            id="nav-tab-communities"
+            onClick={() => onSelectTab('communities')}
+            className={`relative p-3 rounded-2xl transition-all duration-200 group ${
+              activeTab === 'communities'
+                ? isSophisticatedDark
+                  ? 'bg-gradient-to-br from-[#D4AF37] to-[#B8860B] text-white shadow-[0_4px_20px_rgba(212,175,55,0.35)] border border-[#FFDF73]/40'
+                  : isGold
+                  ? 'bg-gradient-to-br from-[#FFF9E6] to-[#FEF3C7] text-[#996515] border border-[#D4AF37]/60 shadow-[0_4px_16px_rgba(212,175,55,0.2)]'
+                  : 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/50 shadow-[0_4px_16px_rgba(16,185,129,0.25)]'
+                : isSophisticatedDark
+                ? 'text-slate-400 hover:text-[#D4AF37] hover:bg-white/5'
+                : isGold
+                ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/80'
+                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
+            }`}
+            title="Communities"
           >
             <Users className="w-5 h-5 transition-transform group-hover:scale-110" />
           </button>
@@ -185,8 +214,8 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
             <Settings className="w-5 h-5 transition-transform group-hover:scale-110" />
           </button>
 
-          {/* PWA Install Button */}
-          {onOpenPWAInstallModal && (
+          {/* PWA Install Button (Hidden if already standalone / installed) */}
+          {onOpenPWAInstallModal && !isPWAInstalled() && (
             <button
               id="nav-pwa-install-btn"
               onClick={onOpenPWAInstallModal}
@@ -197,7 +226,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
                   ? 'border-[#D4AF37]/40 bg-amber-50 text-[#996515] hover:bg-amber-100 shadow-sm'
                   : 'border-emerald-500/30 bg-emerald-950/40 text-emerald-400 hover:bg-emerald-900/40'
               }`}
-              title="Install GlassChat Pro PWA App"
+              title="Install GlasserChat App"
             >
               <Download className="w-5 h-5 transition-transform group-hover:-translate-y-0.5 group-hover:scale-110" />
               <span className="absolute -top-1 -right-1 flex h-3 w-3">
@@ -238,19 +267,19 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
           id="user-profile-nav-avatar"
           onClick={() => onSelectTab('settings')}
           className="relative cursor-pointer group"
-          title={`${currentUser.name} (${currentUser.handle})`}
+          title={currentUser ? `${currentUser.name} (${currentUser.handle})` : 'User Profile'}
         >
           <div className="w-11 h-11 rounded-full border-2 border-[#D4AF37] p-0.5 transition-transform group-hover:scale-105">
             <img
-              src={currentUser.avatar}
-              alt={currentUser.name}
+              src={currentUser?.avatar || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400'}
+              alt={currentUser?.name || 'User'}
               referrerPolicy="no-referrer"
               className="w-full h-full rounded-full object-cover"
             />
           </div>
           <span
             className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full ${
-              statusColors[currentUser.status]
+              currentUser?.status ? (statusColors[currentUser.status] || 'bg-emerald-500') : 'bg-emerald-500'
             }`}
           />
         </div>

@@ -309,6 +309,28 @@ const registeredUsersDB = new Map<string, ServerRegisteredUser>();
 // Initialize default seed registered accounts for live testing if empty
 const seedUsers: ServerRegisteredUser[] = [
   {
+    id: 'user-mom',
+    name: 'Mom ❤️',
+    username: '@mom_home',
+    phone: '+15550123456',
+    profilePic: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&auto=format&fit=crop&q=80',
+    status: 'Always there for you! Call me anytime ❤️',
+    isOnline: true,
+    lastSeen: 'online',
+    createdAt: Date.now() - 500000000,
+  },
+  {
+    id: 'user-dad',
+    name: 'Dad 🔨',
+    username: '@dad_work',
+    phone: '+15550198765',
+    profilePic: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&auto=format&fit=crop&q=80',
+    status: 'At workshop. Call if urgent.',
+    isOnline: false,
+    lastSeen: 'today at 11:20 AM',
+    createdAt: Date.now() - 600000000,
+  },
+  {
     id: 'user-elena-vance',
     name: 'Elena Vance',
     username: '@elena_vance',
@@ -316,6 +338,7 @@ const seedUsers: ServerRegisteredUser[] = [
     profilePic: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
     status: 'Exploring Liquid Glass & WebRTC 4K 🔮',
     isOnline: true,
+    lastSeen: 'online',
     createdAt: Date.now() - 86400000,
   },
   {
@@ -326,6 +349,7 @@ const seedUsers: ServerRegisteredUser[] = [
     profilePic: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
     status: 'Leading Quantum Architecture at PGV Creation ⚡',
     isOnline: true,
+    lastSeen: 'online',
     createdAt: Date.now() - 172800000,
   },
   {
@@ -336,7 +360,7 @@ const seedUsers: ServerRegisteredUser[] = [
     profilePic: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80',
     status: 'Available for WebRTC video sync 📹',
     isOnline: false,
-    lastSeen: '10m ago',
+    lastSeen: 'yesterday at 9:45 PM',
     createdAt: Date.now() - 259200000,
   },
   {
@@ -347,6 +371,7 @@ const seedUsers: ServerRegisteredUser[] = [
     profilePic: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80',
     status: 'End-to-End Encrypted 🔒',
     isOnline: true,
+    lastSeen: 'online',
     createdAt: Date.now() - 345600000,
   }
 ];
@@ -440,6 +465,7 @@ app.post('/api/contacts/search-registered', async (req, res) => {
         profilePic: matchedUser.profilePic || '/icon.svg',
         status: matchedUser.status || 'Hey there! I am using GlassChat',
         isOnline: matchedUser.isOnline,
+        lastSeen: matchedUser.lastSeen || (matchedUser.isOnline ? 'online' : 'recently'),
       },
     });
   } catch (error) {
@@ -457,6 +483,7 @@ app.get('/api/contacts/registered', (req, res) => {
     profilePic: u.profilePic,
     status: u.status,
     isOnline: u.isOnline,
+    lastSeen: u.lastSeen || (u.isOnline ? 'online' : 'recently'),
   }));
   res.json({ users });
 });

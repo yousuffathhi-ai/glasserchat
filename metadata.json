@@ -1,6 +1,6 @@
 {
-  "name": "GlassChat Pro",
-  "description": "Next-generation encrypted chat, HD WebRTC calls, AI translation, and status sharing by PGV Creation.",
+  "name": "GlasserChat",
+  "description": "WhatsApp-style dashboard with IMO-style messaging, WebRTC calling, and PWA support.",
   "requestFramePermissions": ["camera", "microphone", "geolocation"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

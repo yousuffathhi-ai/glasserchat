@@ -16,6 +16,10 @@ import { AuthModal } from './components/AuthModal';
 import { PWAInstallModal } from './components/PWAInstallModal';
 import { InstallPwaBanner } from './components/InstallPwaBanner';
 import { IncomingCallOverlay } from './components/IncomingCallOverlay';
+import { StatusView } from './components/StatusView';
+import { UpdatesView } from './components/UpdatesView';
+import { CommunitiesView } from './components/CommunitiesView';
+import { MobileBottomNav } from './components/MobileBottomNav';
 
 import {
   Chat,
@@ -40,6 +44,7 @@ import {
   saveUserChats,
   getChatMessages,
   appendChatMessage,
+  updateChatMessageStatus,
   saveChatMessages,
   getUserContacts,
   addContactToUser,
@@ -85,9 +90,13 @@ export default function App() {
     null
   );
   const [newChatModalMode, setNewChatModalMode] = useState<'direct' | 'group' | null>(null);
-  const [lightboxMedia, setLightboxMedia] = useState<{ url: string; caption?: string } | null>(
-    null
-  );
+  const [lightboxMedia, setLightboxMedia] = useState<{
+    url: string;
+    caption?: string;
+    type?: 'image' | 'video' | 'document' | string;
+    fileName?: string;
+    fileSize?: string;
+  } | null>(null);
   const [isPWAInstallModalOpen, setIsPWAInstallModalOpen] = useState<boolean>(false);
 
   // Handle PWA shortcut actions from URL query parameters (e.g. /?action=new_chat, /?action=call)
@@ -285,24 +294,26 @@ export default function App() {
     setChats(updatedChats);
     saveUserChats(currentUser.id, updatedChats);
 
-    // Simulate delivery ticks: sent -> delivered -> read
+    // WhatsApp delivery ticks progression: Sent (single tick) -> Delivered (double tick) -> Read (blue double tick)
     setTimeout(() => {
+      updateChatMessageStatus(activeChatId, newMsg.id, 'delivered');
       setMessages((prev) => ({
         ...prev,
         [activeChatId]: (prev[activeChatId] || []).map((m) =>
           m.id === newMsg.id ? { ...m, status: 'delivered' } : m
         ),
       }));
-    }, 600);
+    }, 700);
 
     setTimeout(() => {
+      updateChatMessageStatus(activeChatId, newMsg.id, 'read');
       setMessages((prev) => ({
         ...prev,
         [activeChatId]: (prev[activeChatId] || []).map((m) =>
           m.id === newMsg.id ? { ...m, status: 'read' } : m
         ),
       }));
-    }, 1200);
+    }, 1800);
 
     // If chat is with AI, trigger AI response
     if (activeChat?.isAiAssistant && msgData.text && !msgData.text.startsWith('/imagine')) {
@@ -801,11 +812,19 @@ export default function App() {
         }
         currentUser={currentUser}
         unreadTotalCount={chats.reduce((acc, c) => acc + (c.unreadCount || 0), 0)}
+        missedCallsCount={callRecords.filter((c) => c.status === 'missed').length}
+        unviewedStoriesCount={
+          currentUser
+            ? stories.filter(
+                (s) => s.userId !== currentUser.id && !s.viewedBy?.includes(currentUser.id)
+              ).length
+            : 0
+        }
         onOpenPWAInstallModal={() => setIsPWAInstallModalOpen(true)}
       />
 
       {/* 2. Secondary Panel: ChatList / Calls / Contacts / Settings */}
-      <div className="flex h-full flex-1 overflow-hidden">
+      <div className="flex h-full flex-1 overflow-hidden pb-16 md:pb-0">
         {activeTab === 'chats' && (
           <div className="flex h-full w-full">
             {/* Conversation List */}
@@ -841,7 +860,9 @@ export default function App() {
               onStartCall={handleStartCall}
               onOpenDocumentScanner={() => setIsDocumentScannerOpen(true)}
               onOpenCodeSandbox={(code, language) => setCodeSandboxData({ code, language })}
-              onOpenMediaLightbox={(url, caption) => setLightboxMedia({ url, caption })}
+              onOpenMediaLightbox={(url, caption, type, fileName, fileSize) =>
+                setLightboxMedia({ url, caption, type, fileName, fileSize })
+              }
               onToggleIncognito={() => {
                 if (!activeChat) return;
                 const updated = chats.map((c) =>
@@ -858,9 +879,57 @@ export default function App() {
                 setChats(updated);
                 saveUserChats(currentUser.id, updated);
               }}
+              onBackMobile={() => setActiveChatId(null)}
               onOpenNewChatModal={() => setNewChatModalMode('direct')}
               onOpenNewGroupModal={() => setNewChatModalMode('group')}
             />
+          </div>
+        )}
+
+        {(activeTab === 'updates' || activeTab === 'status') && (
+          <div className="flex h-full w-full">
+            <div className="w-full md:w-96 lg:w-104 h-full">
+              <UpdatesView
+                stories={stories}
+                currentUser={currentUser}
+                contacts={contacts}
+                theme={theme}
+                onOpenStory={(storyId) => setViewingStoryId(storyId)}
+                onCreateStory={() => setIsCreatingStory(true)}
+              />
+            </div>
+            <div className="hidden md:flex flex-1 items-center justify-center p-8 text-center border-l border-black/5 dark:border-white/5">
+              <div className="max-w-md">
+                <h3 className="text-xl font-bold mb-2 gold-text-gradient">
+                  GlasserChat Status & Verified Channels
+                </h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Stay updated with stories that vanish after 24 hours, and follow verified channels for real-time announcements.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'communities' && (
+          <div className="flex h-full w-full">
+            <div className="w-full md:w-96 lg:w-104 h-full">
+              <CommunitiesView
+                currentUser={currentUser}
+                theme={theme}
+                onOpenNewChatModal={() => setNewChatModalMode('group')}
+              />
+            </div>
+            <div className="hidden md:flex flex-1 items-center justify-center p-8 text-center border-l border-black/5 dark:border-white/5">
+              <div className="max-w-md">
+                <h3 className="text-xl font-bold mb-2 gold-text-gradient">
+                  GlasserChat Communities
+                </h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Bring related groups together in organized hubs. Reach everyone at once with announcement groups and manage topic-specific discussions.
+                </p>
+              </div>
+            </div>
           </div>
         )}
 
@@ -936,6 +1005,28 @@ export default function App() {
           </div>
         )}
       </div>
+
+      {/* Mobile Bottom Navigation Bar (WhatsApp Style) */}
+      <MobileBottomNav
+        activeTab={activeTab}
+        onSelectTab={(tab) => {
+          setActiveTab(tab);
+          if (tab !== 'chats') {
+            setActiveChatId(null);
+          }
+        }}
+        theme={theme}
+        unreadTotalCount={chats.reduce((acc, c) => acc + (c.unreadCount || 0), 0)}
+        missedCallsCount={callRecords.filter((c) => c.status === 'missed').length}
+        unviewedStoriesCount={
+          currentUser
+            ? stories.filter(
+                (s) => s.userId !== currentUser.id && !s.viewedBy?.includes(currentUser.id)
+              ).length
+            : 0
+        }
+        hidden={activeTab === 'chats' && activeChatId !== null}
+      />
 
       {/* 3. Global Overlays & Modals */}
       {/* Real-time WebRTC Incoming Call Ringing Overlay */}
@@ -1039,6 +1130,9 @@ export default function App() {
       {lightboxMedia && (
         <MediaLightboxModal
           mediaUrl={lightboxMedia.url}
+          mediaType={lightboxMedia.type}
+          fileName={lightboxMedia.fileName}
+          fileSize={lightboxMedia.fileSize}
           caption={lightboxMedia.caption}
           onClose={() => setLightboxMedia(null)}
         />

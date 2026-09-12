@@ -1,4 +1,4 @@
-// PWA Utility and Installation Handler for GlassChat Pro
+// PWA Utility and Installation Handler for GlasserChat
 // Developed by PGV Creation
 
 export interface BeforeInstallPromptEvent extends Event {
@@ -14,7 +14,7 @@ export interface BeforeInstallPromptEvent extends Event {
 let deferredPrompt: BeforeInstallPromptEvent | null = null;
 const installListeners: Array<(canInstall: boolean) => void> = [];
 
-const DISMISSAL_KEY = 'glasschat_pwa_banner_dismissed';
+const DISMISSAL_KEY = 'glasserchat_pwa_banner_dismissed';
 
 export function isPWAInstalled(): boolean {
   if (typeof window === 'undefined') return false;
@@ -23,6 +23,10 @@ export function isPWAInstalled(): boolean {
     (window.navigator as any).standalone === true ||
     document.referrer.includes('android-app://')
   );
+}
+
+export function hasDeferredPrompt(): boolean {
+  return Boolean(deferredPrompt);
 }
 
 export function isIOS(): boolean {
@@ -80,7 +84,7 @@ export function registerServiceWorker(): void {
             if (installingWorker) {
               installingWorker.onstatechange = () => {
                 if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  console.log('[PGV Creation] ⚡ New GlassChat version available; reload to update.');
+                  console.log('[PGV Creation] ⚡ New GlasserChat version available; reload to update.');
                 }
               };
             }
@@ -103,7 +107,7 @@ export function registerServiceWorker(): void {
     window.addEventListener('appinstalled', () => {
       deferredPrompt = null;
       notifyInstallListeners(false);
-      console.log('[PGV Creation] 🎉 GlassChat Pro installed as PWA successfully!');
+      console.log('[PGV Creation] 🎉 GlasserChat installed as PWA successfully!');
     });
   }
 }

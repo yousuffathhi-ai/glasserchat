@@ -4,7 +4,14 @@ export type DeliveryStatus = 'sending' | 'sent' | 'delivered' | 'read';
 
 export type ThemeMode = 'sophisticated-dark' | 'gold-light' | 'dark-emerald';
 
-export type NavigationTab = 'chats' | 'status' | 'calls' | 'contacts' | 'settings';
+export type NavigationTab =
+  | 'chats'
+  | 'updates'
+  | 'communities'
+  | 'calls'
+  | 'status'
+  | 'contacts'
+  | 'settings';
 
 export type MessageType =
   | 'text'

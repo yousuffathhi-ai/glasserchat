@@ -39,6 +39,8 @@ import {
   Share2,
   Info,
   Lock,
+  ExternalLink,
+  Heart,
 } from 'lucide-react';
 import {
   Chat,
@@ -50,11 +52,12 @@ import {
 } from '../types';
 import { soundFx, VoiceRecorderHelper } from '../utils/audio';
 import { getChatWallpaperStyle } from '../utils/wallpapers';
+import { VoiceNoteRecorder } from './VoiceNoteRecorder';
 
 interface ChatWindowProps {
   chat?: Chat;
   messages: Message[];
-  currentUser: UserProfile;
+  currentUser?: UserProfile | null;
   theme: ThemeMode;
   onSendMessage: (msg: Partial<Message>) => void;
   onReactMessage: (messageId: string, emoji: string) => void;
@@ -65,7 +68,13 @@ interface ChatWindowProps {
   onStartCall: (type: 'audio' | 'video') => void;
   onOpenDocumentScanner: () => void;
   onOpenCodeSandbox: (code: string, language: string) => void;
-  onOpenMediaLightbox: (mediaUrl: string, caption?: string) => void;
+  onOpenMediaLightbox: (
+    mediaUrl: string,
+    caption?: string,
+    mediaType?: 'image' | 'video' | 'document' | string,
+    fileName?: string,
+    fileSize?: string
+  ) => void;
   onToggleIncognito: () => void;
   onSetGhostTimer: (seconds: number) => void;
   onBackMobile?: () => void;
@@ -97,6 +106,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const isSophisticatedDark = theme === 'sophisticated-dark';
   const isGold = theme === 'gold-light';
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Direct partner for online status & last seen
+  const directPartner = chat && chat.type === 'direct'
+    ? chat.participants.find((p) => p.id !== currentUser?.id)
+    : null;
 
   // States
   const [inputText, setInputText] = useState('');
@@ -232,6 +246,49 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   };
 
+  const handleSendVoiceNote = async (voiceData: {
+    audioUrl: string;
+    duration: number;
+    waveform: number[];
+  }) => {
+    setIsRecording(false);
+    let transcript = 'Voice message';
+    let aiSummary = 'Summary: Voice note recorded with GlassChat Pro audio engine.';
+    let sentiment = 'positive';
+
+    try {
+      const res = await fetch('/api/ai/transcribe-voice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          audioBase64: voiceData.audioUrl,
+          mimeType: 'audio/webm',
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.transcript) transcript = data.transcript;
+        if (data.summary) aiSummary = data.summary;
+        if (data.sentiment) sentiment = data.sentiment;
+      }
+    } catch (e) {
+      console.warn('Voice transcription fallback:', e);
+    }
+
+    onSendMessage({
+      type: 'voice',
+      voiceData: {
+        audioUrl: voiceData.audioUrl,
+        duration: voiceData.duration,
+        waveform: voiceData.waveform,
+        transcript,
+        aiSummary,
+        sentiment,
+      },
+    });
+    soundFx.playSent();
+  };
+
   // Send Text or /imagine Command Handler
   const handleSend = async () => {
     const text = inputText.trim();
@@ -339,7 +396,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     return (
       <div
         id="glasschat-empty-chat-stage"
-        className={`flex h-full flex-1 flex-col items-center justify-center relative overflow-hidden select-none p-6 text-center ${
+        className={`hidden md:flex h-full flex-1 flex-col items-center justify-center relative overflow-hidden select-none p-6 text-center ${
           isSophisticatedDark ? 'bg-[#0E1013]' : isGold ? 'bg-[#F4F4F7]' : 'bg-[#0B0D0E]'
         }`}
       >
@@ -366,11 +423,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               isSophisticatedDark || isGold ? 'gold-text-gradient' : 'emerald-text-gradient'
             }`}
           >
-            Welcome to GlassChat Pro
+            Welcome to GlasserChat
           </h2>
           <p className="text-xs text-slate-400 mb-6 leading-relaxed">
-            Signed in as <span className="font-bold text-[#D4AF37]">{currentUser.name}</span> (
-            {currentUser.handle}). No dummy data is loaded. Start your first end-to-end encrypted
+            Signed in as <span className="font-bold text-[#D4AF37]">{currentUser?.name || 'Guest'}</span> (
+            {currentUser?.handle || '@guest'}). No dummy data is loaded. Start your first end-to-end encrypted
             conversation or create a group with registered contacts.
           </p>
 
@@ -413,9 +470,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           id="chat-window-wallpaper-surface"
           className="absolute inset-0 pointer-events-none transition-all duration-500 z-0"
           style={getChatWallpaperStyle(
-            currentUser.wallpaper || 'obsidian-matrix',
+            currentUser?.wallpaper || 'obsidian-matrix',
             theme,
-            currentUser.wallpaperOpacity ?? 0.85
+            currentUser?.wallpaperOpacity ?? 0.85
           )}
         />
 
@@ -464,7 +521,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   className="w-full h-full rounded-[14px] object-cover"
                 />
               </div>
-              {chat.participants.some((p) => p.id !== currentUser.id && p.status === 'online') && (
+              {chat.participants.some((p) => p.id !== currentUser?.id && p.status === 'online') && (
                 <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-[#121417]" />
               )}
             </div>
@@ -491,8 +548,16 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   <span className="text-rose-400 font-semibold flex items-center">
                     <Mic className="w-3 h-3 mr-1 animate-pulse" /> recording audio...
                   </span>
+                ) : directPartner ? (
+                  directPartner.status === 'online' ? (
+                    <span className="text-emerald-400 font-medium flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> online
+                    </span>
+                  ) : (
+                    <span>{directPartner.lastSeen ? `last seen ${directPartner.lastSeen}` : 'last seen recently'}</span>
+                  )
                 ) : (
-                  chat.handle || chat.description || 'Tap for contact info'
+                  chat.description || (chat.participants ? `${chat.participants.length} members` : 'Tap for contact info')
                 )}
               </p>
             </div>
@@ -670,31 +735,38 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
           {/* Message items */}
           {visibleMessages.map((msg) => {
-            const isMe = msg.senderId === currentUser.id;
+            const isMe = Boolean(currentUser && msg.senderId === currentUser.id);
             const translated = translatedMessages[msg.id] || msg.translatedText;
+            const senderAvatar = chat.type === 'direct'
+              ? chat.avatar
+              : (chat.participants.find((p) => p.id === msg.senderId)?.avatar || chat.avatar);
 
             return (
               <div
                 key={msg.id}
                 id={`msg-${msg.id}`}
-                className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} group relative`}
+                className={`flex ${isMe ? 'justify-end' : 'justify-start items-end space-x-2'} group relative my-1`}
               >
-                {/* Message Bubble Container */}
-                <div
-                  className={`relative max-w-[85%] md:max-w-md lg:max-w-lg p-3.5 rounded-2xl transition-all duration-200 ${
-                    isMe
-                      ? isSophisticatedDark
-                        ? 'glass-bubble-sophisticated-sent rounded-tr-xs text-white'
-                        : isGold
-                        ? 'glass-bubble-gold-sent rounded-tr-xs text-slate-900'
-                        : 'glass-bubble-dark-sent rounded-tr-xs text-slate-100'
-                      : isSophisticatedDark
-                      ? 'glass-bubble-sophisticated-received rounded-tl-xs text-slate-100'
-                      : isGold
-                      ? 'glass-bubble-gold-received rounded-tl-xs text-slate-900'
-                      : 'glass-bubble-dark-received rounded-tl-xs text-slate-100'
-                  }`}
-                >
+                {/* IMO-Style Sender Avatar for Received Messages */}
+                {!isMe && (
+                  <img
+                    src={senderAvatar}
+                    alt={msg.senderName}
+                    referrerPolicy="no-referrer"
+                    className="w-7 h-7 rounded-full object-cover mb-1 flex-shrink-0 border border-slate-300 shadow-xs"
+                    title={msg.senderName}
+                  />
+                )}
+
+                <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[85%] md:max-w-md lg:max-w-lg relative`}>
+                  {/* IMO-Style Message Bubble: Light-blue for sent, Clean white for received */}
+                  <div
+                    className={`relative p-3.5 rounded-2xl shadow-sm transition-all duration-200 ${
+                      isMe
+                        ? 'bg-[#D2EEFF] text-slate-900 border border-[#bce3fa] rounded-tr-xs'
+                        : 'bg-white text-slate-900 border border-slate-200/90 rounded-tl-xs'
+                    }`}
+                  >
                   {/* Replying quote if present */}
                   {msg.replyTo && (
                     <div
@@ -824,9 +896,49 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                         src={msg.mediaUrl}
                         alt="Shared media"
                         referrerPolicy="no-referrer"
-                        onClick={() => onOpenMediaLightbox(msg.mediaUrl!, msg.text)}
+                        onClick={() =>
+                          onOpenMediaLightbox(
+                            msg.mediaUrl!,
+                            msg.text,
+                            'image',
+                            msg.fileName || 'Shared_Photo.jpg'
+                          )
+                        }
                         className="rounded-xl max-h-60 w-full object-cover cursor-pointer hover:opacity-95 transition-opacity"
                       />
+                      {msg.text && <p className="text-sm mt-1">{msg.text}</p>}
+                    </div>
+                  )}
+
+                  {/* TYPE: Video */}
+                  {msg.type === 'video' && msg.mediaUrl && (
+                    <div className="space-y-1.5">
+                      <div
+                        className="relative rounded-xl overflow-hidden cursor-pointer group max-h-64 bg-black/40 border border-white/10"
+                        onClick={() =>
+                          onOpenMediaLightbox(
+                            msg.mediaUrl!,
+                            msg.text,
+                            'video',
+                            msg.fileName || 'Shared_Video.mp4',
+                            msg.fileSize || '3.2 MB'
+                          )
+                        }
+                      >
+                        <video
+                          src={msg.mediaUrl}
+                          className="w-full max-h-60 object-cover"
+                          controls={false}
+                        />
+                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/40 transition-colors">
+                          <div className="w-11 h-11 rounded-full bg-white/90 text-slate-950 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                            <Play className="w-5 h-5 fill-current ml-0.5 text-slate-900" />
+                          </div>
+                        </div>
+                        <span className="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/70 text-white text-[10px] font-bold">
+                          {msg.fileSize || 'HD Video'}
+                        </span>
+                      </div>
                       {msg.text && <p className="text-sm mt-1">{msg.text}</p>}
                     </div>
                   )}
@@ -859,7 +971,18 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
                   {/* TYPE: Document */}
                   {msg.type === 'document' && (
-                    <div className="flex items-center space-x-3 p-2.5 rounded-xl bg-black/20 border border-white/10">
+                    <div
+                      onClick={() =>
+                        onOpenMediaLightbox(
+                          msg.mediaUrl || 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+                          msg.text || msg.fileName,
+                          'document',
+                          msg.fileName || 'Scanned_Document.pdf',
+                          msg.fileSize || '2.4 MB'
+                        )
+                      }
+                      className="flex items-center space-x-3 p-2.5 rounded-xl bg-black/20 border border-white/10 cursor-pointer hover:bg-black/30 transition-colors"
+                    >
                       <div className="p-2.5 rounded-xl bg-rose-500/20 text-rose-400">
                         <FileText className="w-5 h-5" />
                       </div>
@@ -867,13 +990,23 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                         <p className="text-xs font-bold truncate">
                           {msg.fileName || 'Scanned_Document.pdf'}
                         </p>
-                        <p className="text-[10px] text-slate-400">{msg.fileSize || '2.4 MB'}</p>
+                        <p className="text-[10px] text-slate-400">{msg.fileSize || '2.4 MB'} • Click to preview</p>
                       </div>
                       <button
-                        onClick={() => alert(`Downloading ${msg.fileName || 'Document'}`)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenMediaLightbox(
+                            msg.mediaUrl || 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+                            msg.text || msg.fileName,
+                            'document',
+                            msg.fileName || 'Scanned_Document.pdf',
+                            msg.fileSize || '2.4 MB'
+                          );
+                        }}
                         className="p-1.5 rounded-lg hover:bg-white/10 text-slate-200"
+                        title="View Document"
                       >
-                        <Download className="w-4 h-4" />
+                        <ExternalLink className="w-4 h-4" />
                       </button>
                     </div>
                   )}
@@ -938,19 +1071,41 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                       })}
                     </span>
 
-                    {/* Ticks if sent by me */}
+                    {/* WhatsApp delivery status ticks if sent by me */}
                     {isMe && (
-                      <span>
+                      <span
+                        className="flex items-center ml-0.5"
+                        title={
+                          msg.status === 'read'
+                            ? 'Read (Blue Double Tick)'
+                            : msg.status === 'delivered'
+                            ? 'Delivered (Double Tick)'
+                            : 'Sent (Single Tick)'
+                        }
+                      >
                         {msg.status === 'read' ? (
-                          <CheckCheck className="w-3.5 h-3.5 text-[#FFDF73]" />
+                          <CheckCheck className="w-3.5 h-3.5 text-[#53bdeb] drop-shadow-[0_0_2px_rgba(83,189,235,0.8)]" />
                         ) : msg.status === 'delivered' ? (
-                          <CheckCheck className="w-3.5 h-3.5 text-white/70" />
+                          <CheckCheck className="w-3.5 h-3.5 text-slate-500" />
                         ) : (
-                          <Check className="w-3.5 h-3.5 text-white/70" />
+                          <Check className="w-3.5 h-3.5 text-slate-500" />
                         )}
                       </span>
                     )}
                   </div>
+
+                  {/* IMO-Style Tiny Heart-like Reaction Icon beside bubble */}
+                  <button
+                    onClick={() => onReactMessage(msg.id, '❤️')}
+                    className={`absolute ${isMe ? '-left-7' : '-right-7'} top-1/2 -translate-y-1/2 p-1 rounded-full transition-all ${
+                      msg.reactions && currentUser && msg.reactions['❤️']?.includes(currentUser.id)
+                        ? 'text-rose-500 scale-110 opacity-100'
+                        : 'text-slate-400 hover:text-rose-500 opacity-0 group-hover:opacity-100 hover:scale-110'
+                    }`}
+                    title="Heart reaction"
+                  >
+                    <Heart className={`w-3.5 h-3.5 ${msg.reactions && currentUser && msg.reactions['❤️']?.includes(currentUser.id) ? 'fill-rose-500 text-rose-500' : ''}`} />
+                  </button>
                 </div>
 
                 {/* Reaction Badges below bubble */}
@@ -963,9 +1118,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                           key={emoji}
                           onClick={() => onReactMessage(msg.id, emoji)}
                           className={`flex items-center space-x-1 px-1.5 py-0.5 rounded-full text-xs border shadow-sm transition-transform hover:scale-110 ${
-                            users.includes(currentUser.id)
-                              ? 'bg-[#1A1D23] border-[#D4AF37] text-[#D4AF37]'
-                              : 'bg-[#14171C] border-white/10 text-slate-300'
+                            currentUser && users.includes(currentUser.id)
+                              ? 'bg-rose-50 border-rose-200 text-rose-600 font-bold'
+                              : 'bg-white border-slate-200 text-slate-700'
                           }`}
                         >
                           <span>{emoji}</span>
@@ -975,6 +1130,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     })}
                   </div>
                 )}
+                </div>
 
                 {/* Hover Quick Action Toolbar */}
                 <div
@@ -1103,39 +1259,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           }`}
         >
           {isRecording ? (
-            /* Live Voice Recording State */
-            <div className="flex items-center justify-between px-3 py-2 bg-rose-500/10 border border-rose-500/30 rounded-2xl animate-pulse">
-              <div className="flex items-center space-x-3">
-                <span className="w-3 h-3 rounded-full bg-rose-500 animate-ping" />
-                <span className="text-sm font-bold text-rose-400">
-                  Recording audio... {recordingSeconds}s
-                </span>
-                <div className="flex items-center space-x-0.5">
-                  {[1, 2, 3, 4, 5].map((b) => (
-                    <span
-                      key={b}
-                      style={{ height: `${(recordingVolume * ((b % 3) + 1)) / 4}px` }}
-                      className="w-1 bg-rose-500 rounded-full max-h-5"
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={handleCancelRecording}
-                  className="p-2 rounded-xl hover:bg-rose-950 text-rose-400 font-bold text-xs"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleFinishRecording}
-                  className="p-2 rounded-xl bg-rose-500 text-white font-bold text-xs shadow-md"
-                >
-                  Send Voice Note
-                </button>
-              </div>
-            </div>
+            /* Live WhatsApp Voice Note Recorder with live audio visualizer & preview */
+            <VoiceNoteRecorder
+              isGold={isGold}
+              onSendVoiceNote={handleSendVoiceNote}
+              onCancel={handleCancelRecording}
+            />
           ) : (
             /* Standard Input Bar */
             <div className="flex items-center space-x-2">
@@ -1158,13 +1287,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 {/* Attachment Menu Popover */}
                 {showAttachmentMenu && (
                   <div
-                    className={`absolute left-0 bottom-14 w-56 rounded-2xl p-2 z-50 shadow-2xl border ${
+                    className={`absolute left-0 bottom-14 w-64 rounded-2xl p-2 z-50 shadow-2xl border ${
                       isSophisticatedDark
                         ? 'bg-[#1A1D23]/98 border-[#D4AF37]/40 text-slate-100'
                         : isGold
                         ? 'bg-white/95 border-[#D4AF37]/40 text-slate-800'
                         : 'bg-[#14181B]/95 border-emerald-500/30 text-slate-100'
-                    } backdrop-blur-2xl grid grid-cols-2 gap-1.5`}
+                    } backdrop-blur-2xl grid grid-cols-3 gap-1.5`}
                   >
                     <button
                       onClick={() => {
@@ -1176,10 +1305,46 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                           text: 'Sophisticated Dark & Gold design preview',
                         });
                       }}
-                      className="flex flex-col items-center p-2.5 rounded-xl hover:bg-white/10 text-center"
+                      className="flex flex-col items-center p-2 rounded-xl hover:bg-white/10 text-center"
                     >
                       <Camera className="w-5 h-5 text-[#D4AF37] mb-1" />
-                      <span className="text-[11px] font-semibold">Photo/Video</span>
+                      <span className="text-[10px] font-semibold">Photo</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setShowAttachmentMenu(false);
+                        onSendMessage({
+                          type: 'video',
+                          mediaUrl:
+                            'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+                          fileName: 'Product_Demo_Teaser.mp4',
+                          fileSize: '4.8 MB',
+                          text: 'Check out the product demo teaser clip!',
+                        });
+                      }}
+                      className="flex flex-col items-center p-2 rounded-xl hover:bg-white/10 text-center"
+                    >
+                      <Video className="w-5 h-5 text-sky-400 mb-1" />
+                      <span className="text-[10px] font-semibold">Video</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setShowAttachmentMenu(false);
+                        onSendMessage({
+                          type: 'document',
+                          mediaUrl:
+                            'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+                          fileName: 'GlassChat_Security_Audit.pdf',
+                          fileSize: '2.1 MB',
+                          text: 'Security verification and cryptographic audit PDF.',
+                        });
+                      }}
+                      className="flex flex-col items-center p-2 rounded-xl hover:bg-white/10 text-center"
+                    >
+                      <FileText className="w-5 h-5 text-rose-400 mb-1" />
+                      <span className="text-[10px] font-semibold">Document</span>
                     </button>
 
                     <button
@@ -1187,10 +1352,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                         setShowAttachmentMenu(false);
                         onOpenDocumentScanner();
                       }}
-                      className="flex flex-col items-center p-2.5 rounded-xl hover:bg-white/10 text-center"
+                      className="flex flex-col items-center p-2 rounded-xl hover:bg-white/10 text-center"
                     >
-                      <FileText className="w-5 h-5 text-rose-500 mb-1" />
-                      <span className="text-[11px] font-semibold">Doc Scanner</span>
+                      <Layers className="w-5 h-5 text-amber-400 mb-1" />
+                      <span className="text-[10px] font-semibold">Scanner</span>
                     </button>
 
                     <button
@@ -1198,10 +1363,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                         setShowAttachmentMenu(false);
                         setShowCodeSnippetModal(true);
                       }}
-                      className="flex flex-col items-center p-2.5 rounded-xl hover:bg-white/10 text-center"
+                      className="flex flex-col items-center p-2 rounded-xl hover:bg-white/10 text-center"
                     >
                       <Code className="w-5 h-5 text-indigo-400 mb-1" />
-                      <span className="text-[11px] font-semibold">Code Block</span>
+                      <span className="text-[10px] font-semibold">Code</span>
                     </button>
 
                     <button
@@ -1218,10 +1383,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                           text: 'Live Location Shared',
                         });
                       }}
-                      className="flex flex-col items-center p-2.5 rounded-xl hover:bg-white/10 text-center"
+                      className="flex flex-col items-center p-2 rounded-xl hover:bg-white/10 text-center"
                     >
                       <MapPin className="w-5 h-5 text-emerald-400 mb-1" />
-                      <span className="text-[11px] font-semibold">Location</span>
+                      <span className="text-[10px] font-semibold">Location</span>
                     </button>
                   </div>
                 )}

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Search,
   Plus,
@@ -20,8 +20,13 @@ import {
   X,
   Shield,
   Eye,
+  Camera,
+  MoreVertical,
+  Download,
+  MessageSquarePlus,
 } from 'lucide-react';
 import { Chat, Story, ThemeMode, UserProfile } from '../types';
+import { isPWAInstalled, triggerPWAInstall, hasDeferredPrompt, subscribeInstallState } from '../utils/pwa';
 
 interface ChatListProps {
   chats: Chat[];
@@ -33,11 +38,13 @@ interface ChatListProps {
   onOpenNewChatModal: () => void;
   onOpenNewGroupModal: () => void;
   theme: ThemeMode;
-  currentUser: UserProfile;
+  currentUser?: UserProfile | null;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
   filterCategory: 'all' | 'unread' | 'groups' | 'direct' | 'starred' | 'archived';
   setFilterCategory: (cat: 'all' | 'unread' | 'groups' | 'direct' | 'starred' | 'archived') => void;
+  onOpenPWAInstallModal?: () => void;
+  onSelectTab?: (tab: any) => void;
 }
 
 export const ChatList: React.FC<ChatListProps> = ({
@@ -55,10 +62,31 @@ export const ChatList: React.FC<ChatListProps> = ({
   setSearchQuery,
   filterCategory,
   setFilterCategory,
+  onOpenPWAInstallModal,
+  onSelectTab,
 }) => {
   const isSophisticatedDark = theme === 'sophisticated-dark';
   const isGold = theme === 'gold-light';
   const [showQuickMenu, setShowQuickMenu] = useState(false);
+  const [canInstall, setCanInstall] = useState<boolean>(!isPWAInstalled());
+
+  useEffect(() => {
+    const unsubscribe = subscribeInstallState((available) => {
+      setCanInstall(!isPWAInstalled() && (available || hasDeferredPrompt()));
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (hasDeferredPrompt()) {
+      const outcome = await triggerPWAInstall();
+      if (outcome === 'accepted') {
+        setCanInstall(false);
+      }
+    } else if (onOpenPWAInstallModal) {
+      onOpenPWAInstallModal();
+    }
+  };
 
   // Group stories by user to avoid duplicate avatar rings
   const userStories = useMemo(() => {
@@ -106,7 +134,9 @@ export const ChatList: React.FC<ChatListProps> = ({
   return (
     <div
       id="glasschat-chat-list-panel"
-      className={`flex flex-col h-full w-full md:w-96 lg:w-104 border-r transition-all duration-300 select-none ${
+      className={`${
+        activeChatId ? 'hidden md:flex' : 'flex'
+      } flex-col h-full w-full md:w-96 lg:w-104 border-r transition-all duration-300 select-none relative ${
         isSophisticatedDark
           ? 'bg-[#121417]/95 border-[#D4AF37]/20 backdrop-blur-2xl text-slate-100'
           : isGold
@@ -114,256 +144,198 @@ export const ChatList: React.FC<ChatListProps> = ({
           : 'bg-[#0B0D0E]/85 border-emerald-500/20 backdrop-blur-xl text-slate-100'
       }`}
     >
-      {/* Header with Title & Action Icons */}
-      <div className="p-4 pb-2">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center space-x-2">
-            <h1
-              className={`text-2xl font-extrabold tracking-tight font-display ${
-                isSophisticatedDark || isGold ? 'gold-text-gradient' : 'emerald-text-gradient'
-              }`}
-            >
-              GlassChat
-            </h1>
-            <span
-              className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                isSophisticatedDark
-                  ? 'bg-[#1A1D23] text-[#D4AF37] border-[#D4AF37]/40 shadow-sm'
-                  : isGold
-                  ? 'bg-amber-50 text-[#AA820A] border-[#D4AF37]/40'
-                  : 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40'
-              }`}
-            >
-              PRO
-            </span>
-          </div>
+      {/* Top Dark Bar: GlasserChat, Install App, Camera, Search, Menu Dots */}
+      <div
+        className={`px-4 py-3 border-b flex items-center justify-between transition-colors ${
+          isSophisticatedDark
+            ? 'bg-[#0E1013] border-white/10 text-white'
+            : isGold
+            ? 'bg-[#181B20] border-[#D4AF37]/30 text-white'
+            : 'bg-[#111B21] border-emerald-500/20 text-white'
+        }`}
+      >
+        <div className="flex items-center space-x-2">
+          <h1 className="text-xl font-bold tracking-tight text-white font-display">
+            GlasserChat
+          </h1>
+          <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+            PRO
+          </span>
+        </div>
 
-          {/* Action Buttons: New Chat / Group Dropdown */}
+        {/* Right Header Actions */}
+        <div className="flex items-center space-x-1 sm:space-x-2">
+          {/* Prominent Install App Button (auto-hides if standalone / installed) */}
+          {canInstall && (
+            <button
+              id="header-pwa-install-btn"
+              onClick={handleInstallClick}
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-emerald-500 text-white hover:bg-emerald-600 text-xs font-bold transition-all shadow-md shadow-emerald-500/30 active:scale-95"
+              title="Install GlasserChat App"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Install App</span>
+            </button>
+          )}
+
+          {/* Camera Icon */}
+          <button
+            id="header-camera-btn"
+            onClick={onCreateStory}
+            className="p-2 text-slate-300 hover:text-white rounded-full hover:bg-white/10 transition-colors"
+            title="Camera & Stories"
+          >
+            <Camera className="w-5 h-5" />
+          </button>
+
+          {/* WhatsApp Menu Dots */}
           <div className="relative">
             <button
-              id="new-chat-dropdown-toggle"
+              id="header-menu-dots-btn"
               onClick={() => setShowQuickMenu(!showQuickMenu)}
-              className={`p-2 rounded-2xl transition-all shadow-md ${
-                isSophisticatedDark
-                  ? 'bg-gradient-to-tr from-[#D4AF37] to-[#B8860B] text-white hover:shadow-[0_4px_16px_rgba(212,175,55,0.4)]'
-                  : isGold
-                  ? 'bg-gradient-to-tr from-[#D4AF37] to-[#FFD700] text-slate-950 hover:shadow-[0_4px_16px_rgba(212,175,55,0.4)]'
-                  : 'bg-gradient-to-tr from-emerald-500 to-lime-400 text-slate-950 hover:shadow-[0_4px_16px_rgba(16,185,129,0.4)]'
-              }`}
-              title="New Conversation"
+              className="p-2 text-slate-300 hover:text-white rounded-full hover:bg-white/10 transition-colors"
+              title="More options"
             >
-              <Plus className="w-4 h-4 font-bold" />
+              <MoreVertical className="w-5 h-5" />
             </button>
 
-            {/* Quick Menu Popover */}
+            {/* Menu Popover */}
             {showQuickMenu && (
               <div
-                className={`absolute right-0 top-11 w-48 rounded-2xl p-2 z-50 shadow-2xl border ${
+                className={`absolute right-0 top-10 w-52 rounded-2xl p-1.5 z-50 shadow-2xl border ${
                   isSophisticatedDark
-                    ? 'bg-[#1A1D23]/98 border-[#D4AF37]/40 text-slate-100'
+                    ? 'bg-[#1A1D23] border-white/10 text-slate-100'
                     : isGold
-                    ? 'bg-white/95 border-[#D4AF37]/40 text-slate-800'
-                    : 'bg-[#14181B]/95 border-emerald-500/30 text-slate-100'
+                    ? 'bg-white border-[#D4AF37]/40 text-slate-800'
+                    : 'bg-[#1E252D] border-white/10 text-slate-100'
                 } backdrop-blur-2xl animate-in fade-in duration-150`}
               >
                 <button
-                  id="action-new-direct-chat"
-                  onClick={() => {
-                    setShowQuickMenu(false);
-                    onOpenNewChatModal();
-                  }}
-                  className={`flex items-center space-x-2.5 w-full p-2.5 text-sm rounded-xl text-left transition-colors ${
-                    isSophisticatedDark
-                      ? 'hover:bg-white/10 text-slate-200'
-                      : isGold
-                      ? 'hover:bg-amber-50'
-                      : 'hover:bg-emerald-950/60'
-                  }`}
-                >
-                  <Plus className="w-4 h-4 text-[#D4AF37]" />
-                  <span>New Message</span>
-                </button>
-
-                <button
-                  id="action-new-group"
+                  id="menu-action-new-group"
                   onClick={() => {
                     setShowQuickMenu(false);
                     onOpenNewGroupModal();
                   }}
-                  className={`flex items-center space-x-2.5 w-full p-2.5 text-sm rounded-xl text-left transition-colors ${
-                    isSophisticatedDark
-                      ? 'hover:bg-white/10 text-slate-200'
-                      : isGold
-                      ? 'hover:bg-amber-50'
-                      : 'hover:bg-emerald-950/60'
-                  }`}
+                  className="flex items-center space-x-2.5 w-full p-2.5 text-xs font-medium rounded-xl text-left hover:bg-white/10 transition-colors"
                 >
-                  <Users className="w-4 h-4 text-[#D4AF37]" />
-                  <span>New Group</span>
+                  <Users className="w-4 h-4 text-emerald-400" />
+                  <span>New group</span>
                 </button>
 
                 <button
-                  id="action-create-story-menu"
+                  id="menu-action-new-community"
                   onClick={() => {
                     setShowQuickMenu(false);
-                    onCreateStory();
+                    if (onSelectTab) onSelectTab('communities');
                   }}
-                  className={`flex items-center space-x-2.5 w-full p-2.5 text-sm rounded-xl text-left transition-colors ${
-                    isSophisticatedDark
-                      ? 'hover:bg-white/10 text-slate-200'
-                      : isGold
-                      ? 'hover:bg-amber-50'
-                      : 'hover:bg-emerald-950/60'
-                  }`}
+                  className="flex items-center space-x-2.5 w-full p-2.5 text-xs font-medium rounded-xl text-left hover:bg-white/10 transition-colors"
                 >
-                  <Radio className="w-4 h-4 text-[#D4AF37]" />
-                  <span>Add 24h Status</span>
+                  <Users className="w-4 h-4 text-emerald-400" />
+                  <span>New community</span>
+                </button>
+
+                <button
+                  id="menu-action-starred"
+                  onClick={() => {
+                    setShowQuickMenu(false);
+                    setFilterCategory('starred');
+                  }}
+                  className="flex items-center space-x-2.5 w-full p-2.5 text-xs font-medium rounded-xl text-left hover:bg-white/10 transition-colors"
+                >
+                  <Star className="w-4 h-4 text-amber-400" />
+                  <span>Starred messages</span>
+                </button>
+
+                {canInstall && (
+                  <button
+                    id="menu-action-install-pwa"
+                    onClick={() => {
+                      setShowQuickMenu(false);
+                      handleInstallClick();
+                    }}
+                    className="flex items-center space-x-2.5 w-full p-2.5 text-xs font-medium rounded-xl text-left hover:bg-white/10 transition-colors text-emerald-400"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Install GlasserChat</span>
+                  </button>
+                )}
+
+                <button
+                  id="menu-action-settings"
+                  onClick={() => {
+                    setShowQuickMenu(false);
+                    if (onSelectTab) onSelectTab('settings');
+                  }}
+                  className="flex items-center space-x-2.5 w-full p-2.5 text-xs font-medium rounded-xl text-left hover:bg-white/10 transition-colors border-t border-white/5 mt-1 pt-2"
+                >
+                  <Sparkles className="w-4 h-4 text-[#D4AF37]" />
+                  <span>Settings</span>
                 </button>
               </div>
             )}
           </div>
         </div>
+      </div>
 
-        {/* Search Bar with clear button */}
-        <div className="relative mb-3">
+      {/* Search Bar with WhatsApp Pill Filters */}
+      <div className="p-3 pb-2">
+        {/* Search Input */}
+        <div className="relative mb-2.5">
           <Search
-            className={`absolute left-3.5 top-3 w-4 h-4 ${
-              isSophisticatedDark || isGold ? 'text-[#D4AF37]' : 'text-emerald-400/70'
-            }`}
+            className="absolute left-3.5 top-2.5 w-4 h-4 text-slate-400"
           />
           <input
             id="chat-search-input"
             type="text"
-            placeholder="Search chats, messages, files..."
+            placeholder="Search or ask Meta AI..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className={`w-full pl-10 pr-9 py-2.5 text-sm rounded-2xl outline-none transition-all border ${
+            className={`w-full pl-10 pr-8 py-2 text-xs rounded-xl outline-none transition-all border ${
               isSophisticatedDark
-                ? 'bg-[#1A1D23] border-[#D4AF37]/25 text-slate-100 placeholder-slate-500 focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37]/30'
+                ? 'bg-[#16191E] border-white/10 text-slate-100 placeholder-slate-400 focus:border-emerald-500'
                 : isGold
-                ? 'bg-white/80 border-[#D4AF37]/30 text-slate-800 placeholder-slate-400 focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20'
-                : 'bg-[#14181B]/80 border-emerald-500/25 text-slate-100 placeholder-slate-500 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/20'
+                ? 'bg-white/90 border-[#D4AF37]/30 text-slate-800 placeholder-slate-400 focus:border-emerald-500 shadow-sm'
+                : 'bg-[#14181B] border-white/10 text-slate-100 placeholder-slate-400 focus:border-emerald-500'
             }`}
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-3 text-slate-400 hover:text-slate-200"
+              className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-200"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
 
-        {/* 24-Hour Stories / Status Carousel */}
-        <div className="mb-3">
-          <div className="flex items-center justify-between text-xs font-semibold mb-2 px-1">
-            <span className={isSophisticatedDark ? 'text-slate-400 font-medium' : isGold ? 'text-slate-600 font-medium' : 'text-slate-400 font-medium'}>
-              24h Stories & Status
-            </span>
-            <button
-              onClick={onCreateStory}
-              className={`text-[11px] font-bold ${
-                isSophisticatedDark || isGold ? 'text-[#D4AF37] hover:underline' : 'text-emerald-400 hover:underline'
-              }`}
-            >
-              + Add Update
-            </button>
-          </div>
-
-          <div className="flex items-center space-x-3 overflow-x-auto pb-1.5 scrollbar-none">
-            {/* Current User Add Story Ring */}
-            <div
-              onClick={onCreateStory}
-              className="flex flex-col items-center space-y-1 flex-shrink-0 cursor-pointer group"
-            >
-              <div className="relative">
-                <div className="w-13 h-13 rounded-2xl border-2 border-dashed border-[#D4AF37] p-0.5 group-hover:scale-105 transition-transform">
-                  <img
-                    src={currentUser.avatar}
-                    alt={currentUser.name}
-                    referrerPolicy="no-referrer"
-                    className="w-full h-full rounded-[14px] object-cover"
-                  />
-                </div>
-                <div className="absolute -bottom-1 -right-1 bg-gradient-to-tr from-[#D4AF37] to-[#B8860B] text-white rounded-full p-0.5 border border-slate-900 shadow-sm">
-                  <Plus className="w-3 h-3 font-bold" />
-                </div>
-              </div>
-              <span className="text-[10px] font-semibold text-slate-400 max-w-[56px] truncate">
-                Your Status
-              </span>
-            </div>
-
-            {/* Contact Stories Rings */}
-            {userStories.map((story) => (
-              <div
-                key={story.id}
-                onClick={() => onOpenStory(story.id)}
-                className="flex flex-col items-center space-y-1 flex-shrink-0 cursor-pointer group"
-              >
-                <div className="relative">
-                  <div
-                    className={`p-0.5 rounded-2xl bg-gradient-to-tr ${
-                      isSophisticatedDark
-                        ? 'from-[#B8860B] via-[#D4AF37] to-[#FFDF73] shadow-[0_0_12px_rgba(212,175,55,0.4)]'
-                        : isGold
-                        ? 'from-[#B8860B] via-[#D4AF37] to-[#FFD700] shadow-[0_0_12px_rgba(212,175,55,0.4)]'
-                        : 'from-emerald-600 via-emerald-400 to-lime-400 shadow-[0_0_12px_rgba(16,185,129,0.4)]'
-                    } group-hover:scale-105 transition-transform`}
-                  >
-                    <img
-                      src={story.userAvatar}
-                      alt={story.userName}
-                      referrerPolicy="no-referrer"
-                      className="w-12 h-12 rounded-[14px] object-cover border border-white/20"
-                    />
-                  </div>
-                  <span className="absolute -top-1 -right-1 flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#D4AF37] opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#FFDF73]" />
-                  </span>
-                </div>
-                <span className="text-[10px] font-semibold text-slate-300 max-w-[56px] truncate">
-                  {story.userName.split(' ')[0]}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Filter Categories Horizontal Chips */}
-        <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 scrollbar-none">
-          {(
-            [
-              { id: 'all', label: 'All Chats' },
-              { id: 'unread', label: 'Unread' },
-              { id: 'groups', label: 'Groups' },
-              { id: 'direct', label: 'Direct' },
-              { id: 'starred', label: 'Starred' },
-              { id: 'archived', label: 'Archived' },
-            ] as const
-          ).map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => setFilterCategory(cat.id)}
-              className={`px-3 py-1 text-xs font-semibold rounded-xl whitespace-nowrap transition-all ${
-                filterCategory === cat.id
-                  ? isSophisticatedDark
-                    ? 'bg-gradient-to-r from-[#D4AF37] to-[#B8860B] text-white font-bold shadow-[0_2px_12px_rgba(212,175,55,0.35)]'
+        {/* WhatsApp Pill Filters: All, Unread, Favourites, Groups */}
+        <div className="flex items-center space-x-2 overflow-x-auto pb-1 scrollbar-none">
+          {[
+            { id: 'all', label: 'All' },
+            { id: 'unread', label: 'Unread' },
+            { id: 'starred', label: 'Favourites' },
+            { id: 'groups', label: 'Groups' },
+          ].map((pill) => {
+            const isSelected = filterCategory === pill.id;
+            return (
+              <button
+                key={pill.id}
+                id={`pill-filter-${pill.id}`}
+                onClick={() => setFilterCategory(pill.id as any)}
+                className={`px-3.5 py-1 text-xs font-semibold rounded-full whitespace-nowrap transition-all ${
+                  isSelected
+                    ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20'
+                    : isSophisticatedDark
+                    ? 'bg-[#1A1D23] text-slate-300 hover:bg-[#22272E] border border-white/5'
                     : isGold
-                    ? 'bg-gradient-to-r from-[#D4AF37] to-[#E6C665] text-slate-950 font-bold shadow-[0_2px_10px_rgba(212,175,55,0.3)]'
-                    : 'bg-emerald-500 text-slate-950 font-bold shadow-[0_2px_10px_rgba(16,185,129,0.3)]'
-                  : isSophisticatedDark
-                  ? 'bg-[#1A1D23] text-slate-400 hover:text-slate-200 border border-white/5'
-                  : isGold
-                  ? 'bg-slate-100/90 text-slate-600 hover:bg-slate-200/80'
-                  : 'bg-slate-900/80 text-slate-400 hover:bg-slate-800'
-              }`}
-            >
-              {cat.label}
-            </button>
-          ))}
+                    ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    : 'bg-white/5 text-slate-300 hover:bg-white/10 border border-white/5'
+                }`}
+              >
+                {pill.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -385,7 +357,7 @@ export const ChatList: React.FC<ChatListProps> = ({
             const isActive = chat.id === activeChatId;
             const lastMsg = chat.lastMessage;
             const isOnline = chat.participants.some(
-              (p) => p.id !== currentUser.id && p.status === 'online'
+              (p) => p.id !== currentUser?.id && p.status === 'online'
             );
 
             return (
@@ -466,7 +438,7 @@ export const ChatList: React.FC<ChatListProps> = ({
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center space-x-1 truncate text-slate-400">
                       {/* Checkmarks if sent by current user */}
-                      {lastMsg?.senderId === currentUser.id && (
+                      {Boolean(currentUser && lastMsg?.senderId === currentUser.id) && (
                         <span className="flex-shrink-0 mr-0.5">
                           {lastMsg.status === 'read' ? (
                             <CheckCheck className="w-3.5 h-3.5 text-[#D4AF37]" />
@@ -539,6 +511,16 @@ export const ChatList: React.FC<ChatListProps> = ({
           })
         )}
       </div>
+
+      {/* WhatsApp Green Floating Action Button (FAB) */}
+      <button
+        id="chat-list-fab-new-chat"
+        onClick={onOpenNewChatModal}
+        className="absolute bottom-5 right-5 z-20 w-14 h-14 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white shadow-xl shadow-emerald-500/35 flex items-center justify-center active:scale-95 transition-all hover:scale-105"
+        title="New Chat"
+      >
+        <MessageSquarePlus className="w-6 h-6" />
+      </button>
     </div>
   );
 };

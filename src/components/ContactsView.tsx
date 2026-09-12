@@ -37,6 +37,7 @@ interface ServerFoundUser {
   profilePic: string;
   status: string;
   isOnline: boolean;
+  lastSeen?: string;
 }
 
 export const ContactsView: React.FC<ContactsViewProps> = ({
@@ -167,6 +168,80 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
     onStartCallWithContact(contactObj, type);
   };
 
+  // Import device contacts using Navigator Contacts API (navigator.contacts.select)
+  // with fallback to database sync
+  const handleImportNavigatorContacts = async () => {
+    setSyncing(true);
+    setSyncSuccessMsg(null);
+
+    const nav = typeof navigator !== 'undefined' ? (navigator as any) : null;
+    const isNavigatorContactsSupported =
+      nav && 'contacts' in nav && 'ContactsManager' in window && typeof nav.contacts.select === 'function';
+
+    if (isNavigatorContactsSupported) {
+      try {
+        const props = ['name', 'tel', 'email'];
+        const opts = { multiple: true };
+        const selectedDeviceContacts = await nav.contacts.select(props, opts);
+
+        if (selectedDeviceContacts && selectedDeviceContacts.length > 0) {
+          const phoneNumbers: string[] = [];
+          selectedDeviceContacts.forEach((c: any) => {
+            if (c.tel && Array.isArray(c.tel)) {
+              c.tel.forEach((t: string) => phoneNumbers.push(t));
+            }
+          });
+
+          let matchedDbUsers: ServerFoundUser[] = [];
+          if (phoneNumbers.length > 0) {
+            const syncRes = await fetch('/api/contacts/sync', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ phoneNumbers }),
+            });
+            if (syncRes.ok) {
+              const syncData = await syncRes.json();
+              matchedDbUsers = syncData.users || [];
+            }
+          }
+
+          selectedDeviceContacts.forEach((c: any) => {
+            const rawName = (c.name && c.name[0]) || 'Device Contact';
+            const rawTel = (c.tel && c.tel[0]) || '';
+            const cleanDigits = rawTel.replace(/[^0-9]/g, '');
+
+            const matched = matchedDbUsers.find((u) => {
+              const uDigits = (u.phone || '').replace(/[^0-9]/g, '');
+              return cleanDigits && uDigits && (uDigits.includes(cleanDigits) || cleanDigits.includes(uDigits));
+            });
+
+            if (onAddNewContact) {
+              onAddNewContact({
+                id: matched ? matched.id : `device-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+                name: matched ? matched.name : rawName,
+                handle: matched ? matched.username : `@${rawName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
+                avatar: matched ? matched.profilePic : `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400`,
+                status: matched ? (matched.isOnline ? 'online' : 'offline') : 'offline',
+                bio: matched ? matched.status : 'Imported via Device Contacts API',
+                phone: matched ? matched.phone : rawTel,
+                lastSeen: matched?.lastSeen,
+              });
+            }
+          });
+
+          setSyncSuccessMsg(`Imported ${selectedDeviceContacts.length} contacts via Navigator Contacts API!`);
+          setSyncing(false);
+          return;
+        }
+      } catch (err) {
+        console.log('Navigator contacts selection cancelled or permission denied:', err);
+      }
+    }
+
+    // Fallback: Sync all verified profiles from server database
+    await handleSyncDeviceContacts();
+  };
+
   // Sync Device Contacts with Registered Server Users
   const handleSyncDeviceContacts = async () => {
     setSyncing(true);
@@ -189,6 +264,7 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
                   status: serverUser.isOnline ? 'online' : 'offline',
                   bio: serverUser.status,
                   phone: serverUser.phone,
+                  lastSeen: serverUser.lastSeen,
                 });
                 addedCount++;
               }
@@ -233,13 +309,23 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
           </div>
           <div className="flex items-center space-x-1.5">
             <button
+              onClick={handleImportNavigatorContacts}
+              disabled={syncing}
+              className="p-2 px-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition-all active:scale-95"
+              title="Import local device contacts via Navigator Contacts API"
+            >
+              <Smartphone className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Device Sync</span>
+            </button>
+
+            <button
               onClick={handleSyncDeviceContacts}
               disabled={syncing}
               className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-[#D4AF37] border border-[#D4AF37]/30 text-xs flex items-center gap-1 transition-all"
               title="Sync & verify network users"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline font-bold">Sync</span>
+              <span className="hidden sm:inline font-bold">Sync All</span>
             </button>
 
             <button
@@ -261,11 +347,11 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
         )}
 
         {/* Search Input Bar */}
-        <div className="relative mb-3">
+        <div className="relative mb-2">
           <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Search registered phone (+1...), username (@...), or name..."
+            placeholder="Enter phone number (e.g. mom's number +1 555...) or name..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className={`w-full pl-9 pr-8 py-2 text-xs rounded-xl border outline-none transition-all ${
@@ -282,6 +368,25 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
             </div>
           )}
         </div>
+
+        {/* Quick Directory Discovery Chips */}
+        <div className="flex items-center space-x-1.5 mb-2 overflow-x-auto no-scrollbar py-0.5">
+          <span className="text-[10px] text-slate-400 font-semibold flex-shrink-0">Match test:</span>
+          {[
+            { label: 'Mom ❤️', query: 'Mom' },
+            { label: '+1 555-012-3456', query: '+15550123456' },
+            { label: 'Dad 🔨', query: 'Dad' },
+            { label: 'Elena Vance', query: 'Elena' },
+          ].map((chip) => (
+            <button
+              key={chip.label}
+              onClick={() => setSearch(chip.query)}
+              className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-white/5 hover:bg-[#D4AF37]/20 hover:text-[#D4AF37] text-slate-300 border border-white/10 transition-colors flex-shrink-0"
+            >
+              {chip.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Main List & Discovery Area */}
@@ -295,9 +400,9 @@ export const ContactsView: React.FC<ContactsViewProps> = ({
                 <UserCheck className="w-3 h-3" />
                 <span>Verified Registered GlassChat User</span>
               </span>
-              <span className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span>{searchedUser.isOnline ? 'Online' : 'Available'}</span>
+              <span className={`text-[10px] font-semibold flex items-center gap-1 ${searchedUser.isOnline ? 'text-emerald-400' : 'text-slate-400'}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${searchedUser.isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
+                <span>{searchedUser.isOnline ? 'Online' : (searchedUser.lastSeen ? `Last seen ${searchedUser.lastSeen}` : 'Offline')}</span>
               </span>
             </div>
 
