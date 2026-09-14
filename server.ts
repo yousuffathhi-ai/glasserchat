@@ -33,11 +33,175 @@ function getGeminiClient(): GoogleGenAI | null {
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
-    appName: 'GlassChat Pro',
-    creator: 'PGV Creation',
+    appName: 'ConvoSphere',
+    tagline: 'Connect. Express. Sphere of Seamless Conversations.',
+    creator: 'ConvoSphere Team',
     aiEnabled: Boolean(process.env.GEMINI_API_KEY),
     timestamp: new Date().toISOString(),
   });
+});
+
+// ==================== AUTHENTICATION ENDPOINTS ====================
+
+// In-memory OTP storage: phone -> { code, expiresAt }
+const otpStore = new Map<string, { code: string; expiresAt: number }>();
+
+// POST /api/auth/google - Authenticate with Google Sign-In profile
+app.post('/api/auth/google', (req, res) => {
+  try {
+    const { id, name, email, avatar } = req.body;
+    if (!name) {
+      return res.status(400).json({ error: 'User name is required from Google profile' });
+    }
+
+    const userId = id || `user-g-${Date.now()}`;
+    const cleanUsername = `@${(email ? email.split('@')[0] : name).toLowerCase().replace(/[^a-z0-9_]/g, '')}`;
+
+    let existingUser = registeredUsersDB.get(userId);
+    if (!existingUser) {
+      existingUser = {
+        id: userId,
+        name,
+        username: cleanUsername,
+        phone: '+1555' + Math.floor(1000000 + Math.random() * 9000000),
+        profilePic: avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400',
+        status: 'Connected with Google on ConvoSphere ✨',
+        isOnline: true,
+        lastSeen: 'online',
+        createdAt: Date.now(),
+      };
+      registeredUsersDB.set(userId, existingUser);
+    } else {
+      existingUser.isOnline = true;
+      existingUser.name = name;
+      if (avatar) existingUser.profilePic = avatar;
+    }
+
+    res.json({
+      success: true,
+      user: existingUser,
+      token: `convosphere_token_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Google authentication failed' });
+  }
+});
+
+// POST /api/auth/send-otp - Generate and dispatch 6-digit OTP code
+app.post('/api/auth/send-otp', (req, res) => {
+  try {
+    const { phone } = req.body;
+    if (!phone) {
+      return res.status(400).json({ error: 'Phone number is required' });
+    }
+
+    const cleanPhone = phone.replace(/[^0-9+]/g, '');
+    // Generate 6-digit OTP
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = Date.now() + 5 * 60 * 1000; // 5 mins
+
+    otpStore.set(cleanPhone, { code, expiresAt });
+
+    console.log(`[ConvoSphere SMS Gateway] Generated OTP for ${cleanPhone}: ${code}`);
+
+    res.json({
+      success: true,
+      message: `OTP sent successfully to ${cleanPhone}.`,
+      // Return code in development response for effortless instant testing
+      debugCode: code,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to send OTP' });
+  }
+});
+
+// POST /api/auth/verify-otp - Verify OTP and complete login
+app.post('/api/auth/verify-otp', (req, res) => {
+  try {
+    const { phone, code, name } = req.body;
+    const cleanPhone = (phone || '').replace(/[^0-9+]/g, '');
+
+    const record = otpStore.get(cleanPhone);
+    // Allow demo master code "123456" or exact code match
+    const isValid = (record && record.code === code && Date.now() <= record.expiresAt) || code === '123456';
+
+    if (!isValid) {
+      return res.status(400).json({ error: 'Invalid or expired verification code.' });
+    }
+
+    // OTP verified: remove it
+    otpStore.delete(cleanPhone);
+
+    // Find or create registered user
+    let user = Array.from(registeredUsersDB.values()).find(
+      (u) => u.phone && u.phone.replace(/[^0-9]/g, '') === cleanPhone.replace(/[^0-9]/g, '')
+    );
+
+    if (!user) {
+      const newId = `user-${Date.now()}`;
+      const defaultName = name || `User ${cleanPhone.slice(-4)}`;
+      user = {
+        id: newId,
+        name: defaultName,
+        username: `@${defaultName.toLowerCase().replace(/[^a-z0-9_]/g, '')}`,
+        phone: cleanPhone,
+        profilePic: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400',
+        status: 'Verified on ConvoSphere ✨',
+        isOnline: true,
+        lastSeen: 'online',
+        createdAt: Date.now(),
+      };
+      registeredUsersDB.set(newId, user);
+    } else {
+      user.isOnline = true;
+    }
+
+    res.json({
+      success: true,
+      user,
+      token: `convosphere_otp_token_${Date.now()}`,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: 'OTP verification failed' });
+  }
+});
+
+// POST /api/auth/login-email - Email & Password login
+app.post('/api/auth/login-email', (req, res) => {
+  try {
+    const { email, password, name } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    const usernamePart = email.split('@')[0];
+    const displayName = name || (usernamePart.charAt(0).toUpperCase() + usernamePart.slice(1));
+    const userId = `user-em-${usernamePart.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+
+    let user = registeredUsersDB.get(userId);
+    if (!user) {
+      user = {
+        id: userId,
+        name: displayName,
+        username: `@${usernamePart.toLowerCase().replace(/[^a-z0-9_]/g, '')}`,
+        phone: '+1555' + Math.floor(1000000 + Math.random() * 9000000),
+        profilePic: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400',
+        status: 'Available on ConvoSphere',
+        isOnline: true,
+        lastSeen: 'online',
+        createdAt: Date.now(),
+      };
+      registeredUsersDB.set(userId, user);
+    }
+
+    res.json({
+      success: true,
+      user,
+      token: `convosphere_email_token_${Date.now()}`,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Email login failed' });
+  }
 });
 
 // AI Translation endpoint
@@ -347,7 +511,7 @@ const seedUsers: ServerRegisteredUser[] = [
     username: '@marcus_sterling',
     phone: '+14155550142',
     profilePic: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
-    status: 'Leading Quantum Architecture at PGV Creation ⚡',
+    status: 'Leading Quantum Architecture at ConvoSphere ⚡',
     isOnline: true,
     lastSeen: 'online',
     createdAt: Date.now() - 172800000,
@@ -395,7 +559,7 @@ app.post('/api/contacts/register', (req, res) => {
       username: cleanUsername,
       phone: cleanPhone,
       profilePic: profilePic || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400',
-      status: status || 'Hey there! I am using GlassChat Pro ✨',
+      status: status || 'Hey there! I am using ConvoSphere Pro ✨',
       isOnline: true,
       createdAt: Date.now(),
     };

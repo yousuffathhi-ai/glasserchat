@@ -65,7 +65,7 @@ export const NewChatModal: React.FC<NewChatModalProps> = ({
       handle: formattedHandle,
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
       status: 'offline',
-      bio: 'GlassChat Registered Member',
+      bio: 'ConvoSphere Registered Member',
     };
 
     if (onAddNewContact) {

@@ -1,7 +1,7 @@
 {
-  "name": "GlasserChat",
-  "short_name": "GlasserChat",
-  "description": "WhatsApp-style dashboard with IMO-style messaging, WebRTC calling, and PWA support.",
+  "name": "ConvoSphere",
+  "short_name": "ConvoSphere",
+  "description": "ConvoSphere — Connect. Express. Sphere of Seamless Conversations. Next-gen glassmorphic messenger with WebRTC calling, rich expressions, stories, and privacy.",
   "start_url": "/",
   "id": "/",
   "scope": "/",

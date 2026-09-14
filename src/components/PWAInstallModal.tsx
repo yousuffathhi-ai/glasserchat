@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { ThemeMode } from '../types';
 import { isPWAInstalled, isIOS, triggerPWAInstall, subscribeInstallState } from '../utils/pwa';
+import { ConvoSphereLogo } from './common/ConvoSphereLogo';
 
 interface PWAInstallModalProps {
   isOpen: boolean;
@@ -86,50 +87,41 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({ isOpen, onClos
 
         {/* Top App Header with App Icon */}
         <div className="flex items-center space-x-4 mb-6">
-          <div className="relative w-16 h-16 rounded-2xl p-0.5 bg-gradient-to-tr from-[#CCFF00] via-emerald-500 to-[#0B0D0E] shadow-lg flex-shrink-0">
-            <img
-              src="/icon.svg"
-              alt="GlassChat by PGV Creation"
-              className="w-full h-full rounded-[14px] object-cover bg-[#0B0D0E]"
-            />
-            <div className="absolute -bottom-1 -right-1 p-1 rounded-full bg-[#CCFF00] text-[#0B0D0E]">
-              <Sparkles className="w-3.5 h-3.5" />
-            </div>
-          </div>
+          <ConvoSphereLogo size="lg" withGlow={true} withRings={true} />
 
           <div>
             <div className="flex items-center space-x-2">
-              <h2 className="text-xl font-black tracking-tight text-white">
-                GlassChat <span className="text-[#CCFF00]">Pro</span>
+              <h2 className="text-xl font-black tracking-tight text-white font-display">
+                ConvoSphere <span className="text-[#FFD700]">Pro</span>
               </h2>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-extrabold border border-emerald-500/30 uppercase tracking-wide">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#00F0FF]/20 text-[#00F0FF] font-black border border-[#00F0FF]/30 uppercase tracking-wide">
                 PWA
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Progressive Web App by <span className="text-[#CCFF00] font-medium">PGV Creation</span>
+              Connect. Express. <span className="text-[#FF007F] font-medium">Sphere of Seamless Conversations</span>
             </p>
           </div>
         </div>
 
         {/* Status: Already Installed */}
         {alreadyInstalled ? (
-          <div className="p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 mb-6 flex items-center space-x-3">
-            <CheckCircle2 className="w-6 h-6 flex-shrink-0 text-[#CCFF00]" />
+          <div className="p-4 rounded-2xl bg-[#00F0FF]/15 border border-[#00F0FF]/40 text-[#00F0FF] mb-6 flex items-center space-x-3">
+            <CheckCircle2 className="w-6 h-6 flex-shrink-0 text-[#FFD700]" />
             <div>
               <p className="text-xs font-bold text-slate-100">Standalone PWA Active</p>
               <p className="text-[11px] text-slate-300">
-                You are currently running GlassChat Pro with native device integration, offline caching, and push alerts.
+                You are currently running ConvoSphere with native device integration, offline caching, and instant messaging.
               </p>
             </div>
           </div>
         ) : installSuccess ? (
           <div className="p-4 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 mb-6 flex items-center space-x-3">
-            <CheckCircle2 className="w-6 h-6 flex-shrink-0 text-[#CCFF00]" />
+            <CheckCircle2 className="w-6 h-6 flex-shrink-0 text-[#FFD700]" />
             <div>
               <p className="text-xs font-bold text-slate-100">Installation Initiated!</p>
               <p className="text-[11px] text-slate-300">
-                GlassChat Pro is now installing. Check your desktop or home screen for the standalone app.
+                ConvoSphere is now installing. Check your desktop or home screen for the standalone app.
               </p>
             </div>
           </div>
@@ -221,7 +213,7 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({ isOpen, onClos
                     <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-[#CCFF00] text-[11px] font-bold flex items-center justify-center flex-shrink-0">
                       3
                     </span>
-                    <span>Tap <strong>Add</strong> in the top right to launch GlassChat like a native app.</span>
+                    <span>Tap <strong>Add</strong> in the top right to launch ConvoSphere like a native app.</span>
                   </div>
                 </div>
               </div>
@@ -236,7 +228,7 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({ isOpen, onClos
                   <span className="text-[10px] text-emerald-400 font-semibold">Chrome, Edge & Android</span>
                 </div>
                 <p className="text-xs text-slate-300 leading-relaxed">
-                  Click the install icon in your browser address bar or select <strong>Install GlassChat</strong> from the browser menu.
+                  Click the install icon in your browser address bar or select <strong>Install ConvoSphere</strong> from the browser menu.
                 </p>
                 <button
                   onClick={handleInstallClick}
@@ -256,7 +248,7 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({ isOpen, onClos
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
             <span>256-bit AES Encrypted PWA</span>
           </span>
-          <span className="text-slate-500">by PGV Creation • v1.2.0</span>
+          <span className="text-[#00F0FF] font-medium">ConvoSphere • v2.5.0</span>
         </div>
       </div>
     </div>

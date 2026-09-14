@@ -11,11 +11,18 @@
     --obsidian-bg: #0D0F12;
     --obsidian-surface: #14171C;
     --obsidian-card: #1A1D23;
+
+    /* PGV Talk Custom Color Palette */
+    --pgv-pink: #FF007F;
+    --pgv-blue: #007AFF;
+    --pgv-cyan: #00F0FF;
+    --pgv-purple: #8A2BE2;
+    --pgv-gold: #FFD700;
   }
 
   body {
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-    background-color: #0D0F12;
+    background-color: #0A0C10;
     color: #F3F4F6;
     -webkit-tap-highlight-color: transparent;
   }
@@ -28,6 +35,72 @@
 
 .font-mono-code {
   font-family: 'Fira Code', monospace;
+}
+
+/* PGV Talk Signature Glass & Surface Classes */
+.glass-panel-pgv {
+  background: rgba(15, 20, 32, 0.75);
+  backdrop-filter: blur(20px) saturate(190%);
+  -webkit-backdrop-filter: blur(20px) saturate(190%);
+  border: 1px solid rgba(0, 240, 255, 0.28);
+  box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.75), 0 0 25px rgba(0, 122, 255, 0.15);
+}
+
+.pgv-glow-card {
+  background: rgba(15, 20, 32, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  box-shadow: 0 8px 32px 0 rgba(0, 122, 255, 0.2), inset 0 0 14px rgba(255, 0, 127, 0.1);
+}
+
+.pgv-glow-card-gold {
+  background: rgba(15, 20, 32, 0.75);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 215, 0, 0.45);
+  box-shadow: 0 8px 32px 0 rgba(255, 215, 0, 0.25), inset 0 0 14px rgba(255, 215, 0, 0.12);
+}
+
+.glass-bubble-pgv-sent {
+  background: linear-gradient(135deg, rgba(255, 0, 127, 0.85) 0%, rgba(138, 43, 226, 0.85) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 0, 127, 0.4);
+  box-shadow: 0 8px 24px rgba(255, 0, 127, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  color: #FFFFFF;
+}
+
+.glass-bubble-pgv-received {
+  background: rgba(0, 122, 255, 0.2);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 240, 255, 0.35);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4), 0 0 16px rgba(0, 240, 255, 0.12);
+  color: #FFFFFF;
+}
+
+.pgv-gradient-primary {
+  background: linear-gradient(135deg, #007AFF 0%, #FF007F 100%);
+}
+
+.pgv-gradient-accent {
+  background: linear-gradient(135deg, #FF007F 0%, #8A2BE2 50%, #007AFF 100%);
+}
+
+.pgv-gradient-gold {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+}
+
+.pgv-text-gradient {
+  background: linear-gradient(135deg, #FF007F 0%, #00F0FF 45%, #007AFF 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.pgv-badge-gold {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+  color: #0A0C10;
+  font-weight: 800;
 }
 
 /* Sophisticated Dark Glass & Surface Classes */

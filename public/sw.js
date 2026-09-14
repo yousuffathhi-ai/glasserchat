@@ -1,6 +1,6 @@
-// GlasserChat - Progressive Web App Service Worker
-// Developed by PGV Creation
-const CACHE_NAME = 'glasserchat-v2.0.1';
+// ConvoSphere - Progressive Web App Service Worker
+// Connect. Express. Sphere of Seamless Conversations.
+const CACHE_NAME = 'convosphere-v2.1.0';
 const STATIC_ASSETS = [
   '/manifest.json',
   '/manifest.webmanifest',
@@ -13,9 +13,9 @@ const STATIC_ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[GlasserChat SW] Caching core static assets...');
+      console.log('[ConvoSphere SW] Caching core static assets...');
       return cache.addAll(STATIC_ASSETS).catch((err) => {
-        console.warn('[GlasserChat SW] Partial precache notice:', err);
+        console.warn('[ConvoSphere SW] Partial precache notice:', err);
       });
     })
   );
@@ -29,7 +29,7 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         keys.map((key) => {
           if (key !== CACHE_NAME) {
-            console.log('[GlasserChat SW] Purging old cache:', key);
+            console.log('[ConvoSphere SW] Purging old cache:', key);
             return caches.delete(key);
           }
         })

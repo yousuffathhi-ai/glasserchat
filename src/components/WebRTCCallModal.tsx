@@ -231,7 +231,7 @@ export const WebRTCCallModal: React.FC<WebRTCCallModalProps> = ({
         body: JSON.stringify({
           callDuration: durationMins,
           participants: participantsList,
-          topic: 'GlassChat Pro Architecture & Glassmorphism Design Review',
+          topic: 'ConvoSphere Pro Architecture & Glassmorphism Design Review',
         }),
       });
       const data = await res.json();

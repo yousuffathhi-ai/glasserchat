@@ -124,7 +124,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         >
           Preferences & Account
         </h2>
-        <p className="text-xs text-slate-400 mt-1">GlassChat Pro • Zero Dummy Data Mode</p>
+        <p className="text-xs text-slate-400 mt-1">ConvoSphere Pro • Zero Dummy Data Mode</p>
       </div>
 
       <div className="p-6 space-y-6 max-w-xl">
@@ -515,7 +515,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
 
           <p className="text-xs text-slate-400 leading-relaxed">
-            Install GlassChat Pro as a standalone native desktop or mobile application with offline persistence, full screen view, and hardware push notifications.
+            Install ConvoSphere as a standalone native desktop or mobile application with offline persistence, full screen view, and hardware push notifications.
           </p>
 
           {onOpenPWAInstallModal && (
@@ -544,9 +544,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
         {/* Footer info */}
         <div className="text-center pt-2">
-          <p className="text-[10px] text-slate-400">GlassChat Pro • Zero Dummy Data</p>
-          <p className="text-[9px] text-[#D4AF37] font-bold mt-0.5">
-            Crafted for high-end privacy & real registered data
+          <p className="text-[10px] text-slate-400">ConvoSphere Pro • Zero Dummy Data</p>
+          <p className="text-[9px] text-[#00F0FF] font-bold mt-0.5">
+            Connect. Express. Sphere of Seamless Conversations.
           </p>
         </div>
       </div>

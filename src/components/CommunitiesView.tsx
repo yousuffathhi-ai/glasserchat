@@ -45,15 +45,15 @@ export const CommunitiesView: React.FC<CommunitiesViewProps> = ({
   const [communities, setCommunities] = useState<Community[]>([
     {
       id: 'comm-1',
-      name: 'Glasser Tech & AI Circle',
+      name: 'ConvoSphere Official Community',
       avatar: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=150&auto=format&fit=crop&q=80',
-      description: 'Official developer community for GlasserChat, WebRTC, and AI agents.',
-      membersCount: 1420,
+      description: 'Official community for ConvoSphere — Connect. Express. Sphere of Seamless Conversations.',
+      membersCount: 3850,
       groups: [
         {
           id: 'grp-1',
           name: '📢 Announcements',
-          lastMessage: 'GlasserChat v2.0 released with IMO messaging & WhatsApp layout!',
+          lastMessage: '🎉 Welcome to ConvoSphere! Enjoy seamless glassmorphic messaging, WebRTC calling & rich expressions.',
           time: '10:45 AM',
           unreadCount: 3,
           isAnnouncement: true,
@@ -133,7 +133,7 @@ export const CommunitiesView: React.FC<CommunitiesViewProps> = ({
       id: `comm-${Date.now()}`,
       name: newCommName.trim(),
       avatar: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=150&auto=format&fit=crop&q=80',
-      description: newCommDesc.trim() || 'Active GlasserChat community.',
+      description: newCommDesc.trim() || 'Active ConvoSphere community.',
       membersCount: 1,
       groups: [
         {

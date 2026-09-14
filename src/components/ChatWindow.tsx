@@ -41,6 +41,10 @@ import {
   Lock,
   ExternalLink,
   Heart,
+  Plus,
+  BarChart2,
+  Music as MusicIcon,
+  CheckCircle2,
 } from 'lucide-react';
 import {
   Chat,
@@ -49,10 +53,25 @@ import {
   ThemeMode,
   UserProfile,
   DeliveryStatus,
+  PollData,
+  EventData,
+  MusicData,
+  ContactCard,
+  LocationData,
 } from '../types';
 import { soundFx, VoiceRecorderHelper } from '../utils/audio';
 import { getChatWallpaperStyle } from '../utils/wallpapers';
 import { VoiceNoteRecorder } from './VoiceNoteRecorder';
+import { AttachmentSheet } from './AttachmentSheet';
+import { RichPickerModal } from './RichPickerModal';
+import { PhotoStudio } from './PhotoStudio';
+import { PollModal } from './modals/PollModal';
+import { EventModal } from './modals/EventModal';
+import { ContactModal } from './modals/ContactModal';
+import { LocationModal } from './modals/LocationModal';
+import { CameraModal } from './modals/CameraModal';
+import { StickerMakerModal } from './modals/StickerMakerModal';
+import { ConvoSphereLogo } from './common/ConvoSphereLogo';
 
 interface ChatWindowProps {
   chat?: Chat;
@@ -150,6 +169,228 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   >('typescript');
   const [newCodeSnippetText, setNewCodeSnippetText] = useState('');
   const [newCodeTitle, setNewCodeTitle] = useState('');
+
+  // Rich PGV Talk attachment & picker states
+  const [showAttachmentSheet, setShowAttachmentSheet] = useState(false);
+  const [showRichPicker, setShowRichPicker] = useState(false);
+  const [showPhotoStudio, setShowPhotoStudio] = useState(false);
+  const [photoStudioInitialImage, setPhotoStudioInitialImage] = useState<string | undefined>(undefined);
+  const [showPollModal, setShowPollModal] = useState(false);
+  const [showEventModal, setShowEventModal] = useState(false);
+  const [showContactModal, setShowContactModal] = useState(false);
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [showCameraModal, setShowCameraModal] = useState(false);
+  const [showStickerMakerModal, setShowStickerMakerModal] = useState(false);
+
+  // Local interactive states for Polls & Music
+  const [localPollVotes, setLocalPollVotes] = useState<{ [msgId: string]: { [optionId: string]: string[] } }>({});
+  const [localEventRsvps, setLocalEventRsvps] = useState<{ [msgId: string]: string }>({});
+  const [playingMusicId, setPlayingMusicId] = useState<string | null>(null);
+  const musicAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Handle Action Sheet Selection (10 Items)
+  const handleSelectAttachmentAction = (
+    action:
+      | 'document'
+      | 'media'
+      | 'paste-image'
+      | 'sticker-maker'
+      | 'camera'
+      | 'audio'
+      | 'contact'
+      | 'poll'
+      | 'event'
+      | 'location'
+  ) => {
+    setShowAttachmentSheet(false);
+    switch (action) {
+      case 'document': {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.pdf,.doc,.docx,.txt,.zip,.json,.js,.ts';
+        input.onchange = (e: any) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+              onSendMessage({
+                type: 'document',
+                mediaUrl: ev.target?.result as string,
+                fileName: file.name,
+                fileSize: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
+                text: file.name,
+              });
+              soundFx.playSent();
+            };
+            reader.readAsDataURL(file);
+          }
+        };
+        input.click();
+        break;
+      }
+      case 'media': {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*,video/*';
+        input.onchange = (e: any) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+              const url = ev.target?.result as string;
+              if (file.type.startsWith('video/')) {
+                onSendMessage({
+                  type: 'video',
+                  mediaUrl: url,
+                  fileName: file.name,
+                  fileSize: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
+                  text: file.name,
+                });
+                soundFx.playSent();
+              } else {
+                setPhotoStudioInitialImage(url);
+                setShowPhotoStudio(true);
+              }
+            };
+            reader.readAsDataURL(file);
+          }
+        };
+        input.click();
+        break;
+      }
+      case 'paste-image': {
+        if (navigator.clipboard?.read) {
+          navigator.clipboard
+            .read()
+            .then(async (items) => {
+              let found = false;
+              for (const item of items) {
+                for (const type of item.types) {
+                  if (type.startsWith('image/')) {
+                    const blob = await item.getType(type);
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                      setPhotoStudioInitialImage(ev.target?.result as string);
+                      setShowPhotoStudio(true);
+                    };
+                    reader.readAsDataURL(blob);
+                    found = true;
+                    break;
+                  }
+                }
+              }
+              if (!found) {
+                setPhotoStudioInitialImage(
+                  'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800'
+                );
+                setShowPhotoStudio(true);
+              }
+            })
+            .catch(() => {
+              setPhotoStudioInitialImage(
+                'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800'
+              );
+              setShowPhotoStudio(true);
+            });
+        } else {
+          setPhotoStudioInitialImage(
+            'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800'
+          );
+          setShowPhotoStudio(true);
+        }
+        break;
+      }
+      case 'sticker-maker':
+        setShowStickerMakerModal(true);
+        break;
+      case 'camera':
+        setShowCameraModal(true);
+        break;
+      case 'audio': {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'audio/*';
+        input.onchange = (e: any) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+              onSendMessage({
+                type: 'voice',
+                text: `Audio Track: ${file.name}`,
+                voiceData: {
+                  audioUrl: ev.target?.result as string,
+                  duration: 20,
+                  waveform: [40, 60, 80, 50, 90, 70, 85, 45, 60, 75, 55, 95, 80, 65, 50, 40],
+                  transcript: `Audio file: ${file.name}`,
+                  aiSummary: 'Shared high-fidelity audio track',
+                },
+              });
+              soundFx.playSent();
+            };
+            reader.readAsDataURL(file);
+          }
+        };
+        input.click();
+        break;
+      }
+      case 'contact':
+        setShowContactModal(true);
+        break;
+      case 'poll':
+        setShowPollModal(true);
+        break;
+      case 'event':
+        setShowEventModal(true);
+        break;
+      case 'location':
+        setShowLocationModal(true);
+        break;
+    }
+  };
+
+  // Poll Vote Handler
+  const handleVotePollOption = (msgId: string, optionId: string, allowMultiple?: boolean) => {
+    if (!currentUser) return;
+    setLocalPollVotes((prev) => {
+      const currentMsgVotes = prev[msgId] || {};
+      const newMsgVotes = { ...currentMsgVotes };
+
+      if (!allowMultiple) {
+        // Clear previous vote by this user
+        Object.keys(newMsgVotes).forEach((opt) => {
+          newMsgVotes[opt] = (newMsgVotes[opt] || []).filter((uid) => uid !== currentUser.id);
+        });
+      }
+
+      const existingForOption = newMsgVotes[optionId] || [];
+      if (existingForOption.includes(currentUser.id)) {
+        newMsgVotes[optionId] = existingForOption.filter((uid) => uid !== currentUser.id);
+      } else {
+        newMsgVotes[optionId] = [...existingForOption, currentUser.id];
+      }
+
+      return { ...prev, [msgId]: newMsgVotes };
+    });
+    soundFx.playSent();
+  };
+
+  // Music Play/Pause Handler
+  const handleTogglePlayMusic = (msgId: string, audioUrl: string) => {
+    if (playingMusicId === msgId) {
+      musicAudioRef.current?.pause();
+      setPlayingMusicId(null);
+    } else {
+      if (musicAudioRef.current) {
+        musicAudioRef.current.pause();
+      }
+      const audio = new Audio(audioUrl);
+      musicAudioRef.current = audio;
+      audio.play().catch((err) => console.warn('Audio play err:', err));
+      audio.onended = () => setPlayingMusicId(null);
+      setPlayingMusicId(msgId);
+    }
+  };
 
   // Auto scroll to bottom
   const scrollToBottom = () => {
@@ -415,20 +656,18 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               : 'bg-[#0F1316]/95 border-emerald-500/35 text-slate-100'
           } backdrop-blur-2xl`}
         >
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#B8860B] via-[#D4AF37] to-[#FFDF73] flex items-center justify-center shadow-[0_4px_24px_rgba(212,175,55,0.4)] mb-4">
-            <Sparkles className="w-8 h-8 text-slate-950" />
+          <div className="mb-3 transition-transform duration-300 hover:scale-105">
+            <ConvoSphereLogo size="lg" withGlow={true} withRings={true} />
           </div>
-          <h2
-            className={`text-xl font-extrabold font-display mb-1 ${
-              isSophisticatedDark || isGold ? 'gold-text-gradient' : 'emerald-text-gradient'
-            }`}
-          >
-            Welcome to GlasserChat
+          <h2 className="text-2xl font-black font-display mb-1 bg-gradient-to-r from-[#FF007F] via-[#00F0FF] to-[#007AFF] bg-clip-text text-transparent">
+            Welcome to ConvoSphere
           </h2>
-          <p className="text-xs text-slate-400 mb-6 leading-relaxed">
-            Signed in as <span className="font-bold text-[#D4AF37]">{currentUser?.name || 'Guest'}</span> (
-            {currentUser?.handle || '@guest'}). No dummy data is loaded. Start your first end-to-end encrypted
-            conversation or create a group with registered contacts.
+          <p className="text-[11px] font-semibold text-[#FFD700] tracking-wide mb-3">
+            Connect. Express. Sphere of Seamless Conversations.
+          </p>
+          <p className="text-xs text-slate-300 mb-6 leading-relaxed">
+            Signed in as <span className="font-bold text-[#00F0FF]">{currentUser?.name || 'Guest'}</span> (
+            {currentUser?.handle || '@guest'}). Select a contact or start a new encrypted conversation with rich expressions, polls, events, and WebRTC HD calls.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 w-full">
@@ -476,27 +715,15 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           )}
         />
 
-        {/* Ambient Theme Tone Overlay */}
-        <div
-          className={`absolute inset-0 pointer-events-none transition-opacity z-0 ${
-            isSophisticatedDark
-              ? 'sophisticated-grid-bg opacity-20'
-              : isGold
-              ? 'bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-amber-100/20 via-yellow-50/10 to-transparent opacity-40'
-              : 'bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-900/20 via-slate-900/40 to-transparent opacity-30'
-          }`}
-        />
+        {/* Subtle glowing ambient purple & pink gradient blobs */}
+        <div className="absolute top-1/4 -left-20 w-80 h-80 rounded-full bg-[#8A2BE2]/15 blur-[90px] pointer-events-none z-0" />
+        <div className="absolute bottom-1/3 -right-20 w-96 h-96 rounded-full bg-[#FF007F]/15 blur-[100px] pointer-events-none z-0" />
+        <div className="absolute top-2/3 left-1/3 w-64 h-64 rounded-full bg-[#007AFF]/12 blur-[80px] pointer-events-none z-0" />
 
         {/* 1. TOP HEADER */}
         <header
           id="chat-window-top-header"
-          className={`relative z-20 flex items-center justify-between px-4 py-3 border-b transition-all ${
-            isSophisticatedDark
-              ? 'bg-[#121417]/95 border-[#D4AF37]/20 backdrop-blur-2xl shadow-sm text-slate-100'
-              : isGold
-              ? 'bg-white/85 border-[#D4AF37]/30 backdrop-blur-xl shadow-sm text-slate-900'
-              : 'bg-[#0F1214]/90 border-emerald-500/20 backdrop-blur-xl shadow-sm text-slate-100'
-          }`}
+          className="relative z-20 flex items-center justify-between px-4 py-3 border-b border-[#00F0FF]/25 bg-[rgba(15,20,32,0.85)] backdrop-blur-2xl shadow-md text-white transition-all"
         >
           {/* Left: Avatar, Name, Handle, Status */}
           <div className="flex items-center space-x-3">
@@ -761,10 +988,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[85%] md:max-w-md lg:max-w-lg relative`}>
                   {/* IMO-Style Message Bubble: Light-blue for sent, Clean white for received */}
                   <div
-                    className={`relative p-3.5 rounded-2xl shadow-sm transition-all duration-200 ${
+                    className={`relative p-3.5 rounded-2xl transition-all duration-200 ${
                       isMe
-                        ? 'bg-[#D2EEFF] text-slate-900 border border-[#bce3fa] rounded-tr-xs'
-                        : 'bg-white text-slate-900 border border-slate-200/90 rounded-tl-xs'
+                        ? 'glass-bubble-pgv-sent rounded-tr-xs text-white'
+                        : 'glass-bubble-pgv-received rounded-tl-xs text-white'
                     }`}
                   >
                   {/* Replying quote if present */}
@@ -1043,6 +1270,217 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     </div>
                   )}
 
+                  {/* TYPE: Poll */}
+                  {msg.type === 'poll' && msg.pollData && (
+                    <div className="space-y-2.5 min-w-[260px] sm:min-w-[300px]">
+                      <div className="flex items-center space-x-2 pb-1 border-b border-white/10">
+                        <div className="p-1.5 rounded-lg bg-gradient-to-tr from-[#FF007F] to-[#007AFF] text-white">
+                          <BarChart2 className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-[#00F0FF]">
+                            Interactive Poll
+                          </span>
+                          <h4 className="text-xs sm:text-sm font-bold text-white leading-snug">
+                            {msg.pollData.question}
+                          </h4>
+                        </div>
+                      </div>
+
+                      {/* Options */}
+                      <div className="space-y-1.5">
+                        {msg.pollData.options.map((opt) => {
+                          const currentVotes = (localPollVotes[msg.id]?.[opt.id]) || opt.votes || [];
+                          const allVotesCount = Object.values(localPollVotes[msg.id] || {}).reduce(
+                            (acc: number, list: string[]) => acc + (list?.length || 0),
+                            0
+                          ) || msg.pollData!.options.reduce((acc, o) => acc + (o.votes?.length || 0), 0);
+                          const percentage = allVotesCount > 0 ? Math.round((currentVotes.length / allVotesCount) * 100) : 0;
+                          const hasVoted = currentUser && currentVotes.includes(currentUser.id);
+
+                          return (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              onClick={() => handleVotePollOption(msg.id, opt.id, msg.pollData?.allowMultipleAnswers)}
+                              className={`w-full text-left p-2.5 rounded-xl border relative overflow-hidden transition-all group ${
+                                hasVoted
+                                  ? 'border-[#00F0FF] bg-[#007AFF]/20 text-white'
+                                  : 'border-white/10 bg-black/30 hover:border-white/25 text-slate-200'
+                              }`}
+                            >
+                              {/* Background Progress Bar */}
+                              <div
+                                style={{ width: `${percentage}%` }}
+                                className={`absolute left-0 top-0 bottom-0 transition-all duration-500 opacity-25 ${
+                                  hasVoted
+                                    ? 'bg-gradient-to-r from-[#FF007F] to-[#00F0FF]'
+                                    : 'bg-gradient-to-r from-slate-600 to-slate-400'
+                                }`}
+                              />
+                              <div className="relative z-10 flex items-center justify-between">
+                                <div className="flex items-center space-x-2">
+                                  <div
+                                    className={`w-4 h-4 rounded-full border flex items-center justify-center text-[10px] transition-all ${
+                                      hasVoted
+                                        ? 'border-[#00F0FF] bg-[#00F0FF] text-slate-950 font-bold'
+                                        : 'border-white/40'
+                                    }`}
+                                  >
+                                    {hasVoted && <Check className="w-3 h-3 stroke-[3]" />}
+                                  </div>
+                                  <span className="text-xs font-semibold">{opt.text}</span>
+                                </div>
+                                <div className="flex items-center space-x-1.5 text-[11px] font-bold">
+                                  <span className="text-slate-400">{currentVotes.length}</span>
+                                  <span className={hasVoted ? 'text-[#00F0FF]' : 'text-slate-300'}>
+                                    {percentage}%
+                                  </span>
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1">
+                        <span>
+                          {msg.pollData.allowMultipleAnswers ? 'Multiple choice' : 'Single choice'}
+                        </span>
+                        <span>
+                          {Object.values(localPollVotes[msg.id] || {}).reduce((a: number, l: string[]) => a + (l?.length || 0), 0) ||
+                            msg.pollData.options.reduce((a, o) => a + (o.votes?.length || 0), 0)}{' '}
+                          votes
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TYPE: Event Schedule */}
+                  {msg.type === 'event' && msg.eventData && (
+                    <div className="space-y-2 min-w-[260px] sm:min-w-[280px]">
+                      <div className="p-3 rounded-2xl bg-gradient-to-r from-[#141824] to-[#1A1F2C] border border-[#FF007F]/30 shadow-md">
+                        <div className="flex items-center space-x-2.5 mb-2">
+                          <div className="p-2 rounded-xl bg-gradient-to-tr from-[#FF007F] to-[#FFD700] text-slate-950">
+                            <Calendar className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-black uppercase text-[#FFD700]">Event Invitation</span>
+                            <h4 className="text-xs sm:text-sm font-bold text-white">{msg.eventData.title}</h4>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1 text-xs text-slate-300 bg-black/30 p-2.5 rounded-xl border border-white/5">
+                          <div className="flex items-center space-x-2">
+                            <Clock className="w-3.5 h-3.5 text-[#00F0FF]" />
+                            <span>{new Date(msg.eventData.dateTime).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                          </div>
+                          {msg.eventData.location && (
+                            <div className="flex items-center space-x-2">
+                              <MapPin className="w-3.5 h-3.5 text-rose-400" />
+                              <span className="truncate">{msg.eventData.location}</span>
+                            </div>
+                          )}
+                          {msg.eventData.description && (
+                            <p className="text-[11px] text-slate-400 pt-1 border-t border-white/5 line-clamp-2">
+                              {msg.eventData.description}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* RSVP Quick Actions */}
+                        <div className="flex items-center space-x-1.5 mt-2.5">
+                          {['going', 'maybe', 'cant_go'].map((st) => {
+                            const isSelected = localEventRsvps[msg.id] === st;
+                            const label = st === 'going' ? 'Going 👍' : st === 'maybe' ? 'Maybe 🤔' : 'Pass ❌';
+                            return (
+                              <button
+                                key={st}
+                                type="button"
+                                onClick={() => {
+                                  setLocalEventRsvps((prev) => ({ ...prev, [msg.id]: st }));
+                                  soundFx.playSent();
+                                }}
+                                className={`flex-1 py-1 px-2 rounded-lg text-[10px] font-bold transition-all ${
+                                  isSelected
+                                    ? 'bg-gradient-to-r from-[#FF007F] to-[#007AFF] text-white shadow-sm'
+                                    : 'bg-white/5 text-slate-300 hover:bg-white/10'
+                                }`}
+                              >
+                                {label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TYPE: Music / Audio Track */}
+                  {msg.type === 'music' && msg.musicData && (
+                    <div className="space-y-2 min-w-[240px] sm:min-w-[280px]">
+                      <div className="p-3 rounded-2xl bg-gradient-to-r from-[#121622] to-[#1B2130] border border-[#00F0FF]/30 flex items-center space-x-3 shadow-lg">
+                        <div className="relative w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-slate-900 border border-white/10">
+                          <img
+                            src={msg.musicData.coverArt || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200'}
+                            alt={msg.musicData.title}
+                            referrerPolicy="no-referrer"
+                            className="w-full h-full object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleTogglePlayMusic(msg.id, msg.musicData!.audioUrl)}
+                            className="absolute inset-0 bg-black/40 hover:bg-black/20 flex items-center justify-center transition-colors text-white"
+                          >
+                            {playingMusicId === msg.id ? (
+                              <Pause className="w-5 h-5 fill-current" />
+                            ) : (
+                              <Play className="w-5 h-5 fill-current ml-0.5" />
+                            )}
+                          </button>
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <span className="text-[9px] font-black uppercase text-[#00F0FF] tracking-wider flex items-center gap-1">
+                            <MusicIcon className="w-3 h-3" /> PGV Music Clip
+                          </span>
+                          <h4 className="text-xs font-bold text-white truncate">{msg.musicData.title}</h4>
+                          <p className="text-[11px] text-slate-400 truncate">{msg.musicData.artist}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TYPE: Contact Card */}
+                  {msg.type === 'contact' && msg.contactCard && (
+                    <div className="space-y-2 min-w-[240px] sm:min-w-[260px]">
+                      <div className="p-3 rounded-2xl bg-gradient-to-r from-[#141824] to-[#1E2333] border border-white/10 shadow-md">
+                        <div className="flex items-center space-x-3 mb-2.5">
+                          <img
+                            src={msg.contactCard.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200'}
+                            alt={msg.contactCard.name}
+                            referrerPolicy="no-referrer"
+                            className="w-10 h-10 rounded-xl object-cover border border-[#FF007F]"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <h4 className="text-xs font-bold text-white truncate">{msg.contactCard.name}</h4>
+                            <p className="text-[11px] text-[#00F0FF] font-medium">{msg.contactCard.handle}</p>
+                            <p className="text-[10px] text-slate-400 truncate">{msg.contactCard.phone}</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (onOpenNewChatModal) onOpenNewChatModal();
+                          }}
+                          className="w-full py-1.5 rounded-xl bg-gradient-to-r from-[#FF007F] to-[#007AFF] text-white text-[11px] font-bold hover:brightness-110 transition-all text-center"
+                        >
+                          Message Contact
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Bottom Meta Row: Ghost timer, Timestamp, Delivery ticks */}
                   <div
                     className={`flex items-center justify-end space-x-1.5 mt-1.5 pt-1 text-[10px] ${
@@ -1084,11 +1522,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                         }
                       >
                         {msg.status === 'read' ? (
-                          <CheckCheck className="w-3.5 h-3.5 text-[#53bdeb] drop-shadow-[0_0_2px_rgba(83,189,235,0.8)]" />
+                          <CheckCheck className="w-3.5 h-3.5 text-[#FFD700] drop-shadow-[0_0_6px_rgba(255,215,0,0.85)]" />
                         ) : msg.status === 'delivered' ? (
-                          <CheckCheck className="w-3.5 h-3.5 text-slate-500" />
+                          <CheckCheck className="w-3.5 h-3.5 text-white/70" />
                         ) : (
-                          <Check className="w-3.5 h-3.5 text-slate-500" />
+                          <Check className="w-3.5 h-3.5 text-white/50" />
                         )}
                       </span>
                     )}
@@ -1247,16 +1685,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           </div>
         )}
 
-        {/* 5. BOTTOM INPUT BAR */}
+        {/* 5. BOTTOM INPUT BAR (TYPING BOARD) */}
         <footer
           id="chat-input-footer-bar"
-          className={`relative z-20 p-3 border-t transition-all ${
-            isSophisticatedDark
-              ? 'bg-[#121417]/95 border-[#D4AF37]/20 backdrop-blur-2xl text-slate-100'
-              : isGold
-              ? 'bg-white/85 border-[#D4AF37]/30 backdrop-blur-xl text-slate-900'
-              : 'bg-[#0F1214]/90 border-emerald-500/20 backdrop-blur-xl text-slate-100'
-          }`}
+          className="relative z-20 p-3 border-t border-[#00F0FF]/25 bg-[rgba(15,20,32,0.85)] backdrop-blur-2xl text-white shadow-[0_-8px_32px_rgba(0,0,0,0.5)] transition-all"
         >
           {isRecording ? (
             /* Live WhatsApp Voice Note Recorder with live audio visualizer & preview */
@@ -1268,192 +1700,70 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           ) : (
             /* Standard Input Bar */
             <div className="flex items-center space-x-2">
-              {/* Attachment Button */}
-              <div className="relative">
-                <button
-                  onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
-                  className={`p-2.5 rounded-2xl border transition-all ${
-                    isSophisticatedDark
-                      ? 'bg-[#1A1D23] text-slate-300 border-[#D4AF37]/30 hover:border-[#D4AF37]'
-                      : isGold
-                      ? 'bg-white text-slate-700 border-slate-200 hover:border-[#D4AF37]'
-                      : 'bg-[#14181B] text-slate-300 border-slate-800 hover:border-emerald-500'
-                  }`}
-                  title="Attach Media, Scans, Code"
-                >
-                  <Paperclip className="w-5 h-5" />
-                </button>
+              {/* Attach (+) Button: Glowing Gold/Pink gradient circular icon with glass ripple effect */}
+              <button
+                id="chat-plus-attachment-btn"
+                type="button"
+                onClick={() => setShowAttachmentSheet(true)}
+                className="w-11 h-11 rounded-full flex items-center justify-center transition-all duration-300 bg-gradient-to-tr from-[#FF007F] to-[#FFD700] text-white shadow-[0_0_16px_rgba(255,0,127,0.4)] hover:shadow-[0_0_24px_rgba(255,215,0,0.6)] hover:scale-105 active:scale-95 flex-shrink-0 ring-2 ring-[#FFD700]/30"
+                title="Attachments, Media, Polls & Location (10 Sharing Tools)"
+              >
+                <Plus className="w-5 h-5 text-white stroke-[2.5]" />
+              </button>
 
-                {/* Attachment Menu Popover */}
-                {showAttachmentMenu && (
-                  <div
-                    className={`absolute left-0 bottom-14 w-64 rounded-2xl p-2 z-50 shadow-2xl border ${
-                      isSophisticatedDark
-                        ? 'bg-[#1A1D23]/98 border-[#D4AF37]/40 text-slate-100'
-                        : isGold
-                        ? 'bg-white/95 border-[#D4AF37]/40 text-slate-800'
-                        : 'bg-[#14181B]/95 border-emerald-500/30 text-slate-100'
-                    } backdrop-blur-2xl grid grid-cols-3 gap-1.5`}
-                  >
-                    <button
-                      onClick={() => {
-                        setShowAttachmentMenu(false);
-                        onSendMessage({
-                          type: 'image',
-                          mediaUrl:
-                            'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80',
-                          text: 'Sophisticated Dark & Gold design preview',
-                        });
-                      }}
-                      className="flex flex-col items-center p-2 rounded-xl hover:bg-white/10 text-center"
-                    >
-                      <Camera className="w-5 h-5 text-[#D4AF37] mb-1" />
-                      <span className="text-[10px] font-semibold">Photo</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setShowAttachmentMenu(false);
-                        onSendMessage({
-                          type: 'video',
-                          mediaUrl:
-                            'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-                          fileName: 'Product_Demo_Teaser.mp4',
-                          fileSize: '4.8 MB',
-                          text: 'Check out the product demo teaser clip!',
-                        });
-                      }}
-                      className="flex flex-col items-center p-2 rounded-xl hover:bg-white/10 text-center"
-                    >
-                      <Video className="w-5 h-5 text-sky-400 mb-1" />
-                      <span className="text-[10px] font-semibold">Video</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setShowAttachmentMenu(false);
-                        onSendMessage({
-                          type: 'document',
-                          mediaUrl:
-                            'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-                          fileName: 'GlassChat_Security_Audit.pdf',
-                          fileSize: '2.1 MB',
-                          text: 'Security verification and cryptographic audit PDF.',
-                        });
-                      }}
-                      className="flex flex-col items-center p-2 rounded-xl hover:bg-white/10 text-center"
-                    >
-                      <FileText className="w-5 h-5 text-rose-400 mb-1" />
-                      <span className="text-[10px] font-semibold">Document</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setShowAttachmentMenu(false);
-                        onOpenDocumentScanner();
-                      }}
-                      className="flex flex-col items-center p-2 rounded-xl hover:bg-white/10 text-center"
-                    >
-                      <Layers className="w-5 h-5 text-amber-400 mb-1" />
-                      <span className="text-[10px] font-semibold">Scanner</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setShowAttachmentMenu(false);
-                        setShowCodeSnippetModal(true);
-                      }}
-                      className="flex flex-col items-center p-2 rounded-xl hover:bg-white/10 text-center"
-                    >
-                      <Code className="w-5 h-5 text-indigo-400 mb-1" />
-                      <span className="text-[10px] font-semibold">Code</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setShowAttachmentMenu(false);
-                        onSendMessage({
-                          type: 'location',
-                          location: {
-                            latitude: 6.9271,
-                            longitude: 79.8612,
-                            name: 'PGV Creation HQ',
-                            address: 'Colombo, Sri Lanka',
-                          },
-                          text: 'Live Location Shared',
-                        });
-                      }}
-                      className="flex flex-col items-center p-2 rounded-xl hover:bg-white/10 text-center"
-                    >
-                      <MapPin className="w-5 h-5 text-emerald-400 mb-1" />
-                      <span className="text-[10px] font-semibold">Location</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Input Text Area */}
-              <div className="flex-1 relative">
-                <textarea
-                  id="chat-message-text-input"
-                  rows={1}
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSend();
+              {/* Floating Glassmorphic Input Wrapper with Subtle Gold & Light Blue Glow */}
+              <div className="flex-1 relative rounded-2xl p-[1px] bg-gradient-to-r from-[#00F0FF]/30 via-white/10 to-[#FFD700]/30 focus-within:from-[#00F0FF] focus-within:via-[#8A2BE2] focus-within:to-[#FFD700] focus-within:shadow-[0_0_20px_rgba(0,240,255,0.35),0_0_15px_rgba(255,215,0,0.25)] transition-all duration-300">
+                <div className="relative rounded-2xl bg-[rgba(15,20,32,0.75)] backdrop-blur-xl flex items-center">
+                  <textarea
+                    id="chat-message-text-input"
+                    rows={1}
+                    value={inputText}
+                    onChange={(e) => setInputText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSend();
+                      }
+                    }}
+                    placeholder={
+                      chat.isIncognito
+                        ? 'Incognito message (no history saved)...'
+                        : 'Type a message or /imagine [prompt]...'
                     }
-                  }}
-                  placeholder={
-                    chat.isIncognito
-                      ? 'Incognito message (no history saved)...'
-                      : 'Type a message or /imagine [prompt]...'
-                  }
-                  className={`w-full py-2.5 pl-3 pr-10 rounded-2xl text-sm outline-none resize-none border transition-all ${
-                    isSophisticatedDark
-                      ? 'bg-[#1A1D23] border-[#D4AF37]/30 text-slate-100 placeholder-slate-500 focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37]/30'
-                      : isGold
-                      ? 'bg-white/90 border-[#D4AF37]/30 text-slate-800 placeholder-slate-400 focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20'
-                      : 'bg-[#14181B]/90 border-emerald-500/25 text-slate-100 placeholder-slate-500 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/20'
-                  }`}
-                />
+                    className="w-full py-2.5 pl-3.5 pr-11 bg-transparent text-sm text-white placeholder-white/60 outline-none resize-none"
+                  />
 
-                {/* Emoji Trigger */}
-                <button
-                  onClick={() => {
-                    setInputText((prev) => prev + ' ✨ ');
-                  }}
-                  className="absolute right-3 top-2.5 text-slate-400 hover:text-[#D4AF37]"
-                  title="Insert Emoji"
-                >
-                  <Smile className="w-4 h-4" />
-                </button>
+                  {/* Rich Emoji / GIF / Sticker / Music Picker Trigger */}
+                  <button
+                    id="chat-rich-picker-trigger-btn"
+                    type="button"
+                    onClick={() => setShowRichPicker(true)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-[#FFD700] hover:scale-110 transition-all"
+                    title="Open Emojis, GIFs, Stickers & Music Picker"
+                  >
+                    <Smile className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
 
-              {/* Send or Mic Button */}
+              {/* Send / Voice Note Button: Vibrant Pink & Electric Blue gradient with glowing white icon */}
               {inputText.trim() ? (
                 <button
                   id="chat-send-message-btn"
                   onClick={handleSend}
-                  className="p-2.5 rounded-2xl shadow-lg transition-transform hover:scale-105 bg-gradient-to-tr from-[#D4AF37] to-[#B8860B] text-white font-bold shadow-[0_4px_16px_rgba(212,175,55,0.4)]"
+                  className="w-11 h-11 rounded-2xl flex items-center justify-center transition-all duration-300 bg-gradient-to-tr from-[#FF007F] via-[#8A2BE2] to-[#007AFF] text-white shadow-[0_0_20px_rgba(255,0,127,0.5)] hover:shadow-[0_0_28px_rgba(0,122,255,0.7)] hover:scale-105 active:scale-95 flex-shrink-0"
+                  title="Send Message"
                 >
-                  <Send className="w-5 h-5" />
+                  <Send className="w-5 h-5 text-white" />
                 </button>
               ) : (
                 <button
                   id="chat-voice-record-btn"
                   onClick={handleStartRecording}
-                  className={`p-2.5 rounded-2xl border transition-all ${
-                    isSophisticatedDark
-                      ? 'bg-[#1A1D23] text-[#D4AF37] border-[#D4AF37]/30 hover:bg-[#20252D]'
-                      : isGold
-                      ? 'bg-amber-50 text-[#AA820A] border-[#D4AF37]/40 hover:bg-amber-100'
-                      : 'bg-slate-900 text-emerald-400 border-emerald-500/30 hover:bg-slate-800'
-                  }`}
+                  className="w-11 h-11 rounded-2xl flex items-center justify-center transition-all duration-300 bg-gradient-to-tr from-[#FF007F] via-[#8A2BE2] to-[#007AFF] text-white shadow-[0_0_20px_rgba(255,0,127,0.45)] hover:shadow-[0_0_26px_rgba(0,122,255,0.65)] hover:scale-105 active:scale-95 flex-shrink-0"
                   title="Hold or click to record Voice Note with AI transcript"
                 >
-                  <Mic className="w-5 h-5" />
+                  <Mic className="w-5 h-5 text-white" />
                 </button>
               )}
             </div>
@@ -1580,8 +1890,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             <p className="text-[9px] text-slate-400 uppercase tracking-[0.2em] font-mono">
               End-to-End Encrypted
             </p>
-            <p className="text-[8px] text-[#D4AF37] font-bold mt-1 tracking-wider">
-              POWERED BY PGV CREATION
+            <p className="text-[8px] text-[#00F0FF] font-bold mt-1 tracking-wider">
+              POWERED BY CONVOSPHERE
             </p>
           </div>
         </aside>
@@ -1697,8 +2007,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
             <p className="text-xs text-slate-300 leading-relaxed mb-4">
               Messages and calls with <span className="font-bold text-white">{chat.name}</span> are
-              secured with end-to-end encryption. No one outside of this chat, not even GlassChat or
-              PGV Creation, can read or listen to them.
+              secured with end-to-end encryption. No one outside of this chat, not even ConvoSphere, can read or listen to them.
             </p>
 
             <div className="p-3 rounded-xl bg-black/40 border border-white/10 font-mono-code text-[10px] text-center mb-4 text-[#FFDF73]">
@@ -1769,6 +2078,155 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           </div>
         </div>
       )}
+
+      {/* 1. PGV Talk Attachment Sheet (10 Media & Sharing Options) */}
+      <AttachmentSheet
+        isOpen={showAttachmentSheet}
+        onClose={() => setShowAttachmentSheet(false)}
+        onSelectAction={handleSelectAttachmentAction}
+      />
+
+      {/* 2. Rich Emojis, GIFs, Stickers & Music Picker Modal */}
+      <RichPickerModal
+        isOpen={showRichPicker}
+        onClose={() => setShowRichPicker(false)}
+        onSelectEmoji={(emoji) => {
+          setInputText((prev) => prev + emoji);
+        }}
+        onSelectGif={(gifUrl) => {
+          onSendMessage({
+            type: 'image',
+            mediaUrl: gifUrl,
+            text: 'GIF',
+          });
+          soundFx.playSent();
+        }}
+        onSelectSticker={(stickerUrl) => {
+          onSendMessage({
+            type: 'sticker',
+            mediaUrl: stickerUrl,
+            text: 'Sticker',
+          });
+          soundFx.playSent();
+        }}
+        onSelectMusic={(music) => {
+          onSendMessage({
+            type: 'music',
+            musicData: music,
+            text: `Music: ${music.title} - ${music.artist}`,
+          });
+          soundFx.playSent();
+        }}
+        onSelectLiveEmoji={(text) => {
+          onSendMessage({
+            type: 'text',
+            text: `✨ ${text} ✨`,
+          });
+          soundFx.playSent();
+        }}
+      />
+
+      {/* 3. PicsArt-Style Photo Studio */}
+      <PhotoStudio
+        isOpen={showPhotoStudio}
+        onClose={() => setShowPhotoStudio(false)}
+        initialImage={photoStudioInitialImage}
+        onExportImage={(dataUrl, caption) => {
+          onSendMessage({
+            type: 'image',
+            mediaUrl: dataUrl,
+            text: caption || 'Edited in PGV Photo Studio',
+          });
+          soundFx.playSent();
+        }}
+      />
+
+      {/* 4. Poll Modal */}
+      <PollModal
+        isOpen={showPollModal}
+        onClose={() => setShowPollModal(false)}
+        onCreatePoll={(pollData) => {
+          onSendMessage({
+            type: 'poll',
+            pollData: pollData,
+            text: `Poll: ${pollData.question}`,
+          });
+          soundFx.playSent();
+        }}
+      />
+
+      {/* 5. Event Scheduling Modal */}
+      <EventModal
+        isOpen={showEventModal}
+        onClose={() => setShowEventModal(false)}
+        onCreateEvent={(eventData) => {
+          onSendMessage({
+            type: 'event',
+            eventData: eventData,
+            text: `Event: ${eventData.title}`,
+          });
+          soundFx.playSent();
+        }}
+      />
+
+      {/* 6. Contact Sharing Modal */}
+      <ContactModal
+        isOpen={showContactModal}
+        onClose={() => setShowContactModal(false)}
+        onShareContact={(card) => {
+          onSendMessage({
+            type: 'contact',
+            contactCard: card,
+            text: `Contact: ${card.name} (${card.phone})`,
+          });
+          soundFx.playSent();
+        }}
+        availableContacts={chat.participants}
+      />
+
+      {/* 7. Current Location & Live Location Sharing Modal */}
+      <LocationModal
+        isOpen={showLocationModal}
+        onClose={() => setShowLocationModal(false)}
+        onShareLocation={(loc) => {
+          onSendMessage({
+            type: 'location',
+            location: {
+              latitude: loc.latitude,
+              longitude: loc.longitude,
+              name: loc.name,
+              address: loc.address,
+              isLive: loc.isLive,
+            },
+            text: loc.isLive ? 'Live Location Sharing' : `Location: ${loc.name}`,
+          });
+          soundFx.playSent();
+        }}
+      />
+
+      {/* 8. In-App Camera Access Modal */}
+      <CameraModal
+        isOpen={showCameraModal}
+        onClose={() => setShowCameraModal(false)}
+        onCapture={(imgUrl) => {
+          setPhotoStudioInitialImage(imgUrl);
+          setShowPhotoStudio(true);
+        }}
+      />
+
+      {/* 9. Sticker Maker Modal */}
+      <StickerMakerModal
+        isOpen={showStickerMakerModal}
+        onClose={() => setShowStickerMakerModal(false)}
+        onSendSticker={(stickerUrl) => {
+          onSendMessage({
+            type: 'sticker',
+            mediaUrl: stickerUrl,
+            text: 'Custom Sticker',
+          });
+          soundFx.playSent();
+        }}
+      />
     </div>
   );
 };

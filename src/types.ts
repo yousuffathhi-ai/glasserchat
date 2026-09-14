@@ -2,7 +2,7 @@ export type OnlineStatus = 'online' | 'away' | 'busy' | 'offline';
 
 export type DeliveryStatus = 'sending' | 'sent' | 'delivered' | 'read';
 
-export type ThemeMode = 'sophisticated-dark' | 'gold-light' | 'dark-emerald';
+export type ThemeMode = 'pgv-dark' | 'sophisticated-dark' | 'gold-light' | 'dark-emerald';
 
 export type NavigationTab =
   | 'chats'
@@ -22,7 +22,10 @@ export type MessageType =
   | 'contact'
   | 'location'
   | 'code'
-  | 'sticker';
+  | 'sticker'
+  | 'poll'
+  | 'event'
+  | 'music';
 
 export interface Reaction {
   emoji: string;
@@ -41,6 +44,7 @@ export interface LocationData {
   longitude: number;
   name: string;
   address?: string;
+  isLive?: boolean;
 }
 
 export interface ContactCard {
@@ -48,6 +52,36 @@ export interface ContactCard {
   phone: string;
   handle: string;
   avatar?: string;
+}
+
+export interface PollOption {
+  id: string;
+  text: string;
+  votes: string[]; // user IDs
+}
+
+export interface PollData {
+  question: string;
+  options: PollOption[];
+  allowMultipleAnswers?: boolean;
+  isAnonymous?: boolean;
+  totalVotes: number;
+}
+
+export interface EventData {
+  title: string;
+  description?: string;
+  dateTime: string;
+  location?: string;
+  attendees?: { userId: string; name: string; status: 'going' | 'maybe' | 'cant_go' }[];
+}
+
+export interface MusicData {
+  title: string;
+  artist: string;
+  audioUrl: string;
+  coverArt?: string;
+  duration?: number;
 }
 
 export interface VoiceData {
@@ -76,6 +110,9 @@ export interface Message {
   codeSnippet?: CodeSnippet;
   location?: LocationData;
   contactCard?: ContactCard;
+  poll?: PollData;
+  event?: EventData;
+  musicData?: MusicData;
   status: DeliveryStatus;
   timestamp: string; // ISO string
   createdAt?: number | string; // unix ms or ISO string
@@ -94,6 +131,7 @@ export interface Message {
   ghostTimer?: number; // expiry in seconds (e.g. 10, 60, 3600, 86400)
   expiresAt?: number; // unix timestamp
   isIncognito?: boolean;
+  isVanish?: boolean;
   scheduledFor?: string; // ISO timestamp
 }
 
@@ -125,6 +163,7 @@ export interface Chat {
   isArchived?: boolean;
   isMuted?: boolean;
   isIncognito?: boolean;
+  isVanishMode?: boolean;
   customWallpaper?: string;
   ghostTimerDefault?: number; // default timer for new messages
   description?: string;

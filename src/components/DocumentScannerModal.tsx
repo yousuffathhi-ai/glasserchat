@@ -59,13 +59,13 @@ export const DocumentScannerModal: React.FC<DocumentScannerModalProps> = ({
       'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800&auto=format&fit=crop&q=80';
     setCapturedImage(sampleDoc);
     setExtractedOcrText(
-      'CONFIDENTIAL AGREEMENT\nProject: GlassChat Pro Suite\nClient: PGV Creation\nSecurity: 256-bit AES End-to-End Encryption\nStatus: Verified and Approved'
+      'CONFIDENTIAL AGREEMENT\nProject: ConvoSphere Pro Suite\nClient: ConvoSphere Global\nSecurity: 256-bit AES End-to-End Encryption\nStatus: Verified and Approved'
     );
   };
 
   const handleShare = () => {
     onShareDocument({
-      name: 'Scanned_Contract_PGV.pdf',
+      name: 'Scanned_Contract_ConvoSphere.pdf',
       size: '2.4 MB',
       textPreview: extractedOcrText,
       imageUrl: capturedImage || '',

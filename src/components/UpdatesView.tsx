@@ -51,11 +51,11 @@ export const UpdatesView: React.FC<UpdatesViewProps> = ({
   const [channels, setChannels] = useState<Channel[]>([
     {
       id: 'ch-1',
-      name: 'GlasserChat Official',
+      name: 'ConvoSphere Official',
       avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80',
       verified: true,
-      followers: '2.4M',
-      recentPost: '🎉 Welcome to GlasserChat 2.0! Enjoy IMO-style messaging bubbles & WhatsApp navigation dashboard.',
+      followers: '2.8M',
+      recentPost: '🎉 Welcome to ConvoSphere! Connect. Express. Sphere of Seamless Conversations.',
       time: '10:30 AM',
       isFollowing: true,
       category: 'Official',

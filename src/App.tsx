@@ -20,6 +20,7 @@ import { StatusView } from './components/StatusView';
 import { UpdatesView } from './components/UpdatesView';
 import { CommunitiesView } from './components/CommunitiesView';
 import { MobileBottomNav } from './components/MobileBottomNav';
+import { OnboardingModal } from './components/OnboardingModal';
 
 import {
   Chat,
@@ -98,6 +99,7 @@ export default function App() {
     fileSize?: string;
   } | null>(null);
   const [isPWAInstallModalOpen, setIsPWAInstallModalOpen] = useState<boolean>(false);
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState<boolean>(false);
 
   // Handle PWA shortcut actions from URL query parameters (e.g. /?action=new_chat, /?action=call)
   useEffect(() => {
@@ -821,6 +823,7 @@ export default function App() {
             : 0
         }
         onOpenPWAInstallModal={() => setIsPWAInstallModalOpen(true)}
+        onOpenGuide={() => setIsOnboardingOpen(true)}
       />
 
       {/* 2. Secondary Panel: ChatList / Calls / Contacts / Settings */}
@@ -1141,6 +1144,13 @@ export default function App() {
       {/* Floating PWA Install Prompt Banner */}
       <InstallPwaBanner
         onOpenDetailedModal={() => setIsPWAInstallModalOpen(true)}
+      />
+
+      {/* PGV Talk User Guide & Interactive Tour Modal */}
+      <OnboardingModal
+        isOpen={isOnboardingOpen}
+        onClose={() => setIsOnboardingOpen(false)}
+        theme={theme}
       />
     </div>
   );

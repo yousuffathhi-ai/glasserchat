@@ -12,9 +12,11 @@ import {
   ShieldCheck,
   Zap,
   Download,
+  HelpCircle,
 } from 'lucide-react';
 import { ThemeMode, UserProfile, OnlineStatus, NavigationTab } from '../types';
 import { isPWAInstalled } from '../utils/pwa';
+import { ConvoSphereLogo } from './common/ConvoSphereLogo';
 
 interface NavigationSidebarProps {
   activeTab: NavigationTab;
@@ -27,6 +29,7 @@ interface NavigationSidebarProps {
   unviewedStoriesCount?: number;
   onLockApp?: () => void;
   onOpenPWAInstallModal?: () => void;
+  onOpenGuide?: () => void;
 }
 
 export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
@@ -40,6 +43,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   unviewedStoriesCount = 0,
   onLockApp,
   onOpenPWAInstallModal,
+  onOpenGuide,
 }) => {
   const isSophisticatedDark = theme === 'sophisticated-dark';
   const isGold = theme === 'gold-light';
@@ -54,35 +58,21 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   return (
     <aside
       id="main-navigation-sidebar"
-      className={`hidden md:flex flex-col items-center justify-between py-5 px-3 z-30 transition-all duration-300 ${
-        isSophisticatedDark
-          ? 'bg-[#0E1013]/95 border-r border-[#D4AF37]/20 shadow-[4px_0_30px_rgba(0,0,0,0.6)] backdrop-blur-2xl text-slate-200'
-          : isGold
-          ? 'bg-white/85 border-r border-[#D4AF37]/30 shadow-[4px_0_24px_rgba(212,175,55,0.08)] backdrop-blur-xl text-slate-800'
-          : 'bg-[#0F1214]/90 border-r border-emerald-500/20 shadow-[4px_0_24px_rgba(0,0,0,0.5)] backdrop-blur-xl text-slate-200'
-      } w-20 md:w-22 min-h-screen select-none`}
+      className="hidden md:flex flex-col items-center justify-between py-5 px-3 z-30 transition-all duration-300 bg-[rgba(15,20,32,0.85)] border-r border-[#00F0FF]/25 shadow-[4px_0_30px_rgba(0,0,0,0.7)] backdrop-blur-2xl text-slate-200 w-20 md:w-22 min-h-screen select-none"
     >
       {/* Top Section: Logo & Branding */}
       <div className="flex flex-col items-center space-y-6">
         <div
           id="brand-logo-container"
-          className="relative group cursor-pointer"
-          title="GlasserChat — Next-Gen Encrypted Messenger"
+          className="relative group cursor-pointer text-center flex flex-col items-center"
+          title="ConvoSphere — Connect. Express. Sphere of Seamless Conversations."
           onClick={() => onSelectTab('chats')}
         >
-          <div
-            className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-lg ${
-              isSophisticatedDark
-                ? 'bg-gradient-to-tr from-[#B8860B] via-[#D4AF37] to-[#FFDF73] text-slate-950 ring-2 ring-[#D4AF37]/50 shadow-[0_4px_24px_rgba(212,175,55,0.4)]'
-                : isGold
-                ? 'bg-gradient-to-tr from-[#B8860B] via-[#D4AF37] to-[#FFD700] text-slate-900 ring-2 ring-[#D4AF37]/50 shadow-[0_4px_20px_rgba(212,175,55,0.35)]'
-                : 'bg-gradient-to-tr from-emerald-600 via-emerald-500 to-lime-400 text-slate-950 ring-2 ring-emerald-400/50 shadow-[0_4px_20px_rgba(16,185,129,0.35)]'
-            } group-hover:scale-105`}
-          >
-            <Sparkles className="w-6 h-6 animate-pulse text-slate-950" />
+          <div className="transition-transform duration-300 group-hover:scale-110">
+            <ConvoSphereLogo size="md" withGlow={true} withRings={true} />
           </div>
-          <span className="absolute -bottom-2 -right-1 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full bg-slate-950 text-[#FFDF73] border border-[#D4AF37]/60 shadow-sm">
-            PRO
+          <span className="mt-1 text-[9px] font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-[#00F0FF] via-[#FFD700] to-[#FF007F] uppercase drop-shadow-sm">
+            SPHERE
           </span>
         </div>
 
@@ -94,22 +84,14 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
             onClick={() => onSelectTab('chats')}
             className={`relative p-3 rounded-2xl transition-all duration-200 group ${
               activeTab === 'chats'
-                ? isSophisticatedDark
-                  ? 'bg-gradient-to-br from-[#D4AF37] to-[#B8860B] text-white shadow-[0_4px_20px_rgba(212,175,55,0.35)] border border-[#FFDF73]/40'
-                  : isGold
-                  ? 'bg-gradient-to-br from-[#FFF9E6] to-[#FEF3C7] text-[#996515] border border-[#D4AF37]/60 shadow-[0_4px_16px_rgba(212,175,55,0.2)]'
-                  : 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/50 shadow-[0_4px_16px_rgba(16,185,129,0.25)]'
-                : isSophisticatedDark
-                ? 'text-slate-400 hover:text-[#D4AF37] hover:bg-white/5'
-                : isGold
-                ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/80'
-                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
+                ? 'bg-gradient-to-r from-[#FFD700]/20 via-[#FF007F]/20 to-[#8A2BE2]/20 text-[#FFD700] border border-[#FFD700]/60 shadow-[0_0_18px_rgba(255,215,0,0.45)]'
+                : 'text-white/60 hover:text-[#00F0FF] hover:bg-white/5'
             }`}
             title="Chats & Messages"
           >
             <MessageSquare className="w-5 h-5 transition-transform group-hover:scale-110" />
             {unreadTotalCount > 0 && (
-              <span className="absolute top-1 right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#D4AF37] text-slate-950 px-1 text-[10px] font-extrabold shadow-md">
+              <span className="absolute top-1 right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#FFD700] text-slate-950 px-1 text-[10px] font-extrabold shadow-md">
                 {unreadTotalCount}
               </span>
             )}
@@ -121,24 +103,16 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
             onClick={() => onSelectTab('updates')}
             className={`relative p-3 rounded-2xl transition-all duration-200 group ${
               activeTab === 'updates' || activeTab === 'status'
-                ? isSophisticatedDark
-                  ? 'bg-gradient-to-br from-[#D4AF37] to-[#B8860B] text-white shadow-[0_4px_20px_rgba(212,175,55,0.35)] border border-[#FFDF73]/40'
-                  : isGold
-                  ? 'bg-gradient-to-br from-[#FFF9E6] to-[#FEF3C7] text-[#996515] border border-[#D4AF37]/60 shadow-[0_4px_16px_rgba(212,175,55,0.2)]'
-                  : 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/50 shadow-[0_4px_16px_rgba(16,185,129,0.25)]'
-                : isSophisticatedDark
-                ? 'text-slate-400 hover:text-[#D4AF37] hover:bg-white/5'
-                : isGold
-                ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/80'
-                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
+                ? 'bg-gradient-to-r from-[#FFD700]/20 via-[#FF007F]/20 to-[#8A2BE2]/20 text-[#FFD700] border border-[#FFD700]/60 shadow-[0_0_18px_rgba(255,215,0,0.45)]'
+                : 'text-white/60 hover:text-[#00F0FF] hover:bg-white/5'
             }`}
             title="Updates & Channels"
           >
             <Radio className="w-5 h-5 transition-transform group-hover:scale-110" />
             {unviewedStoriesCount > 0 && (
               <span className="absolute top-1 right-1 flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00F0FF] opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#00F0FF]"></span>
               </span>
             )}
           </button>
@@ -149,16 +123,8 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
             onClick={() => onSelectTab('communities')}
             className={`relative p-3 rounded-2xl transition-all duration-200 group ${
               activeTab === 'communities'
-                ? isSophisticatedDark
-                  ? 'bg-gradient-to-br from-[#D4AF37] to-[#B8860B] text-white shadow-[0_4px_20px_rgba(212,175,55,0.35)] border border-[#FFDF73]/40'
-                  : isGold
-                  ? 'bg-gradient-to-br from-[#FFF9E6] to-[#FEF3C7] text-[#996515] border border-[#D4AF37]/60 shadow-[0_4px_16px_rgba(212,175,55,0.2)]'
-                  : 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/50 shadow-[0_4px_16px_rgba(16,185,129,0.25)]'
-                : isSophisticatedDark
-                ? 'text-slate-400 hover:text-[#D4AF37] hover:bg-white/5'
-                : isGold
-                ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/80'
-                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
+                ? 'bg-gradient-to-r from-[#FFD700]/20 via-[#FF007F]/20 to-[#8A2BE2]/20 text-[#FFD700] border border-[#FFD700]/60 shadow-[0_0_18px_rgba(255,215,0,0.45)]'
+                : 'text-white/60 hover:text-[#00F0FF] hover:bg-white/5'
             }`}
             title="Communities"
           >
@@ -171,22 +137,14 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
             onClick={() => onSelectTab('calls')}
             className={`relative p-3 rounded-2xl transition-all duration-200 group ${
               activeTab === 'calls'
-                ? isSophisticatedDark
-                  ? 'bg-gradient-to-br from-[#D4AF37] to-[#B8860B] text-white shadow-[0_4px_20px_rgba(212,175,55,0.35)] border border-[#FFDF73]/40'
-                  : isGold
-                  ? 'bg-gradient-to-br from-[#FFF9E6] to-[#FEF3C7] text-[#996515] border border-[#D4AF37]/60 shadow-[0_4px_16px_rgba(212,175,55,0.2)]'
-                  : 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/50 shadow-[0_4px_16px_rgba(16,185,129,0.25)]'
-                : isSophisticatedDark
-                ? 'text-slate-400 hover:text-[#D4AF37] hover:bg-white/5'
-                : isGold
-                ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/80'
-                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
+                ? 'bg-gradient-to-r from-[#FFD700]/20 via-[#FF007F]/20 to-[#8A2BE2]/20 text-[#FFD700] border border-[#FFD700]/60 shadow-[0_0_18px_rgba(255,215,0,0.45)]'
+                : 'text-white/60 hover:text-[#00F0FF] hover:bg-white/5'
             }`}
             title="HD Voice & Video Calls"
           >
             <PhoneCall className="w-5 h-5 transition-transform group-hover:scale-110" />
             {missedCallsCount > 0 && (
-              <span className="absolute top-1 right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white shadow-sm">
+              <span className="absolute top-1 right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#FF007F] px-1 text-[10px] font-bold text-white shadow-sm">
                 {missedCallsCount}
               </span>
             )}
@@ -198,21 +156,31 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
             onClick={() => onSelectTab('settings')}
             className={`relative p-3 rounded-2xl transition-all duration-200 group ${
               activeTab === 'settings'
-                ? isSophisticatedDark
-                  ? 'bg-gradient-to-br from-[#D4AF37] to-[#B8860B] text-white shadow-[0_4px_20px_rgba(212,175,55,0.35)] border border-[#FFDF73]/40'
-                  : isGold
-                  ? 'bg-gradient-to-br from-[#FFF9E6] to-[#FEF3C7] text-[#996515] border border-[#D4AF37]/60 shadow-[0_4px_16px_rgba(212,175,55,0.2)]'
-                  : 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/50 shadow-[0_4px_16px_rgba(16,185,129,0.25)]'
-                : isSophisticatedDark
-                ? 'text-slate-400 hover:text-[#D4AF37] hover:bg-white/5'
-                : isGold
-                ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/80'
-                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
+                ? 'bg-gradient-to-r from-[#FFD700]/20 via-[#FF007F]/20 to-[#8A2BE2]/20 text-[#FFD700] border border-[#FFD700]/60 shadow-[0_0_18px_rgba(255,215,0,0.45)]'
+                : 'text-white/60 hover:text-[#00F0FF] hover:bg-white/5'
             }`}
             title="Settings & Privacy"
           >
             <Settings className="w-5 h-5 transition-transform group-hover:scale-110" />
           </button>
+
+          {/* User Guide / Onboarding Tour Button */}
+          {onOpenGuide && (
+            <button
+              id="nav-guide-tour-btn"
+              onClick={onOpenGuide}
+              className={`relative p-3 rounded-2xl transition-all duration-200 group border ${
+                isSophisticatedDark
+                  ? 'border-[#00F0FF]/30 bg-[#161922] text-[#00F0FF] hover:border-[#FF007F] hover:text-[#FF007F] hover:shadow-[0_0_15px_rgba(255,0,127,0.25)]'
+                  : isGold
+                  ? 'border-[#D4AF37]/40 bg-amber-50 text-[#996515] hover:bg-amber-100'
+                  : 'border-cyan-500/30 bg-cyan-950/40 text-cyan-400 hover:bg-cyan-900/40'
+              }`}
+              title="ConvoSphere User Guide & Interactive Tour"
+            >
+              <HelpCircle className="w-5 h-5 transition-transform group-hover:scale-110" />
+            </button>
+          )}
 
           {/* PWA Install Button (Hidden if already standalone / installed) */}
           {onOpenPWAInstallModal && !isPWAInstalled() && (
@@ -226,7 +194,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
                   ? 'border-[#D4AF37]/40 bg-amber-50 text-[#996515] hover:bg-amber-100 shadow-sm'
                   : 'border-emerald-500/30 bg-emerald-950/40 text-emerald-400 hover:bg-emerald-900/40'
               }`}
-              title="Install GlasserChat App"
+              title="Install ConvoSphere App"
             >
               <Download className="w-5 h-5 transition-transform group-hover:-translate-y-0.5 group-hover:scale-110" />
               <span className="absolute -top-1 -right-1 flex h-3 w-3">

@@ -31,7 +31,7 @@ export const CodeSandboxModal: React.FC<CodeSandboxModalProps> = ({
         setOutput('Rendered HTML/CSS/JS sandbox component preview active.');
       } else {
         setOutput(
-          `[Runtime: Node v20.12.0 / GlassChat Sandbox]\n` +
+          `[Runtime: Node v20.12.0 / ConvoSphere Sandbox]\n` +
             `Executing ${language.toUpperCase()} script...\n` +
             `----------------------------------------\n` +
             `Output:\n` +

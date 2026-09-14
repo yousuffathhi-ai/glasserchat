@@ -1,5 +1,5 @@
-// PWA Utility and Installation Handler for GlasserChat
-// Developed by PGV Creation
+// PWA Utility and Installation Handler for ConvoSphere
+// Connect. Express. Sphere of Seamless Conversations.
 
 export interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
@@ -14,7 +14,7 @@ export interface BeforeInstallPromptEvent extends Event {
 let deferredPrompt: BeforeInstallPromptEvent | null = null;
 const installListeners: Array<(canInstall: boolean) => void> = [];
 
-const DISMISSAL_KEY = 'glasserchat_pwa_banner_dismissed';
+const DISMISSAL_KEY = 'convosphere_pwa_banner_dismissed';
 
 export function isPWAInstalled(): boolean {
   if (typeof window === 'undefined') return false;
@@ -77,21 +77,21 @@ export function registerServiceWorker(): void {
       navigator.serviceWorker
         .register('/sw.js', { scope: '/' })
         .then((reg) => {
-          console.log('[PGV Creation] 🚀 Service Worker registered successfully:', reg.scope);
+          console.log('[ConvoSphere] 🚀 Service Worker registered successfully:', reg.scope);
 
           reg.onupdatefound = () => {
             const installingWorker = reg.installing;
             if (installingWorker) {
               installingWorker.onstatechange = () => {
                 if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  console.log('[PGV Creation] ⚡ New GlasserChat version available; reload to update.');
+                  console.log('[ConvoSphere] ⚡ New ConvoSphere version available; reload to update.');
                 }
               };
             }
           };
         })
         .catch((err) => {
-          console.warn('[PGV Creation] ⚠️ PWA Service Worker registration warning:', err);
+          console.warn('[ConvoSphere] ⚠️ PWA Service Worker registration warning:', err);
         });
     });
 
@@ -99,7 +99,7 @@ export function registerServiceWorker(): void {
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       deferredPrompt = e as BeforeInstallPromptEvent;
-      console.log('[PGV Creation] 📥 Captured beforeinstallprompt event.');
+      console.log('[ConvoSphere] 📥 Captured beforeinstallprompt event.');
       notifyInstallListeners(true);
     });
 
@@ -107,7 +107,7 @@ export function registerServiceWorker(): void {
     window.addEventListener('appinstalled', () => {
       deferredPrompt = null;
       notifyInstallListeners(false);
-      console.log('[PGV Creation] 🎉 GlasserChat installed as PWA successfully!');
+      console.log('[ConvoSphere] 🎉 ConvoSphere installed as PWA successfully!');
     });
   }
 }
@@ -136,12 +136,12 @@ export async function triggerPWAInstall(): Promise<'accepted' | 'dismissed' | 'u
   try {
     await deferredPrompt.prompt();
     const choice = await deferredPrompt.userChoice;
-    console.log('[PGV Creation] User choice for install prompt:', choice.outcome);
+    console.log('[ConvoSphere] User choice for install prompt:', choice.outcome);
     deferredPrompt = null;
     notifyInstallListeners(false);
     return choice.outcome;
   } catch (error) {
-    console.error('[PGV Creation] Error triggering PWA install:', error);
+    console.error('[ConvoSphere] Error triggering PWA install:', error);
     return 'unsupported';
   }
 }

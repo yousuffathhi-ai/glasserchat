@@ -60,13 +60,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   return (
     <nav
       id="mobile-bottom-nav"
-      className={`md:hidden fixed bottom-0 left-0 right-0 z-40 px-3 pt-2 pb-safe border-t backdrop-blur-2xl transition-all duration-300 ${
-        isSophisticatedDark
-          ? 'bg-[#0E1013]/92 border-white/10 shadow-[0_-8px_32px_rgba(0,0,0,0.7)] text-slate-400'
-          : isGold
-          ? 'bg-white/90 border-[#D4AF37]/30 shadow-[0_-4px_24px_rgba(212,175,55,0.12)] text-slate-500'
-          : 'bg-[#09110F]/95 border-emerald-500/20 shadow-[0_-8px_32px_rgba(0,0,0,0.6)] text-slate-400'
-      }`}
+      className="md:hidden fixed bottom-0 left-0 right-0 z-40 px-3 pt-2 pb-safe border-t border-[#00F0FF]/30 bg-[rgba(15,20,32,0.85)] backdrop-blur-2xl shadow-[0_-10px_35px_rgba(0,122,255,0.2),0_-1px_15px_rgba(138,43,226,0.15)] transition-all duration-300 text-white"
     >
       <div className="flex items-center justify-around max-w-lg mx-auto">
         {tabs.map((tab) => {
@@ -79,31 +73,23 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
               onClick={() => onSelectTab(tab.id)}
               className={`relative flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all duration-200 group ${
                 isActive
-                  ? isSophisticatedDark
-                    ? 'text-[#D4AF37] font-semibold'
-                    : isGold
-                    ? 'text-[#996515] font-semibold'
-                    : 'text-emerald-400 font-semibold'
-                  : 'hover:text-slate-200 text-slate-400'
+                  ? 'text-[#FFD700] font-bold'
+                  : 'text-white/60 hover:text-[#00F0FF]'
               }`}
             >
               {/* Icon Container with active pill highlight */}
               <div
                 className={`relative p-1.5 rounded-xl transition-all duration-200 ${
                   isActive
-                    ? isSophisticatedDark
-                      ? 'bg-[#D4AF37]/15 ring-1 ring-[#D4AF37]/40 shadow-[0_0_12px_rgba(212,175,55,0.25)] scale-105'
-                      : isGold
-                      ? 'bg-[#FEF3C7] ring-1 ring-[#D4AF37]/50 shadow-sm scale-105'
-                      : 'bg-emerald-500/15 ring-1 ring-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.25)] scale-105'
-                    : 'group-active:scale-95'
+                    ? 'bg-gradient-to-r from-[#FFD700]/20 via-[#FF007F]/20 to-[#8A2BE2]/20 border border-[#FFD700]/60 shadow-[0_0_16px_rgba(255,215,0,0.45)] text-[#FFD700] scale-105'
+                    : 'group-hover:bg-white/5 group-hover:text-[#00F0FF] group-active:scale-95'
                 }`}
               >
                 {tab.icon}
 
                 {/* Number Badge */}
                 {tab.badge && tab.badge > 0 ? (
-                  <span className="absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#D4AF37] text-slate-950 px-1 text-[9px] font-extrabold shadow-md">
+                  <span className="absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#FFD700] text-slate-950 px-1 text-[9px] font-extrabold shadow-md">
                     {tab.badge}
                   </span>
                 ) : null}
@@ -111,14 +97,16 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
                 {/* Dot Badge */}
                 {tab.hasDot ? (
                   <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00F0FF] opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00F0FF]"></span>
                   </span>
                 ) : null}
               </div>
 
               {/* Label */}
-              <span className="text-[10px] tracking-tight mt-0.5 transition-colors">
+              <span className={`text-[10px] tracking-tight mt-0.5 transition-colors ${
+                isActive ? 'text-[#FFD700] font-bold drop-shadow-[0_0_8px_rgba(255,215,0,0.4)]' : 'text-white/60 group-hover:text-[#00F0FF]'
+              }`}>
                 {tab.label}
               </span>
             </button>

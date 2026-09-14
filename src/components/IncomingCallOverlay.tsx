@@ -162,12 +162,12 @@ export const IncomingCallOverlay: React.FC<IncomingCallOverlayProps> = ({
           {incomingCall.callType === 'video' ? (
             <>
               <Video className="w-4 h-4 text-cyan-400 animate-pulse" />
-              <span className="font-semibold text-cyan-300">GlassChat HD Video Call...</span>
+              <span className="font-semibold text-cyan-300">ConvoSphere HD Video Call...</span>
             </>
           ) : (
             <>
               <Phone className="w-4 h-4 text-emerald-400 animate-pulse" />
-              <span className="font-semibold text-emerald-300">GlassChat Crystal Voice Call...</span>
+              <span className="font-semibold text-emerald-300">ConvoSphere Crystal Voice Call...</span>
             </>
           )}
         </div>
