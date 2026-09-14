@@ -17,6 +17,7 @@ import {
   subscribeInstallState,
   triggerPWAInstall,
   isIOS,
+  ensureDynamicPwaIcon,
 } from '../utils/pwa';
 import { ConvoSphereLogo } from './common/ConvoSphereLogo';
 
@@ -58,6 +59,7 @@ export const InstallPwaBanner: React.FC<InstallPwaBannerProps> = ({
   if (!shouldShow) return null;
 
   const handleInstallClick = async () => {
+    ensureDynamicPwaIcon();
     if (isApple && !canInstall) {
       if (onOpenDetailedModal) {
         onOpenDetailedModal();

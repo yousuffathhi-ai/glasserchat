@@ -14,7 +14,7 @@ import {
   Bell,
 } from 'lucide-react';
 import { ThemeMode } from '../types';
-import { isPWAInstalled, isIOS, triggerPWAInstall, subscribeInstallState } from '../utils/pwa';
+import { isPWAInstalled, isIOS, triggerPWAInstall, subscribeInstallState, ensureDynamicPwaIcon } from '../utils/pwa';
 import { ConvoSphereLogo } from './common/ConvoSphereLogo';
 
 interface PWAInstallModalProps {
@@ -46,6 +46,7 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({ isOpen, onClos
   const isGold = theme === 'gold-light';
 
   const handleInstallClick = async () => {
+    ensureDynamicPwaIcon();
     setIsInstalling(true);
     const outcome = await triggerPWAInstall();
     setIsInstalling(false);

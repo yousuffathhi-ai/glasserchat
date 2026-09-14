@@ -1,10 +1,13 @@
 // ConvoSphere - Progressive Web App Service Worker
 // Connect. Express. Sphere of Seamless Conversations.
-const CACHE_NAME = 'convosphere-v2.1.0';
+const CACHE_NAME = 'convosphere-v2.2.0';
 const STATIC_ASSETS = [
   '/manifest.json',
   '/manifest.webmanifest',
   '/icon.svg',
+  '/pwa-icon-192.png',
+  '/pwa-icon-512.png',
+  '/apple-touch-icon.png',
   'https://assets.mixkit.co/active_storage/sfx/1360/1360-preview.mp3',
   'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap'
 ];
